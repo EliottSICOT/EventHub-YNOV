@@ -33,6 +33,7 @@ export function toEventSummary(event: EventWithSummary): EventSummaryDto {
     venue: event.venue,
     city: event.city,
     capacity: event.capacity,
+    priceCents: event.priceCents,
     remainingSeats: remaining,
     isFull: remaining === 0,
     imageUrl: event.imageUrl,

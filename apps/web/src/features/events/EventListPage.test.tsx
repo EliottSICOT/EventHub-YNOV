@@ -22,6 +22,8 @@ describe('Liste des événements (US01)', () => {
     );
     expect(within(first).getByText(`${events[0].venue} · ${events[0].city}`)).toBeInTheDocument();
     expect(within(first).getByText('Complet')).toBeInTheDocument();
+    expect(within(first).getByText('Gratuit')).toBeInTheDocument();
+    expect(within(first).getByText(events[0].category.name)).toBeInTheDocument();
     expect(within(first).getByRole('time')).toHaveAttribute('datetime', events[0].startsAt);
   });
 

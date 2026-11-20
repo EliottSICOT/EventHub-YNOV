@@ -3,7 +3,7 @@ import { ApiError } from '../../api/client';
 import { useEvent } from '../../api/queries';
 import { Spinner } from '../../components/Spinner';
 import { StatusMessage } from '../../components/StatusMessage';
-import { formatDateTime } from './format';
+import { formatDateTime, formatPrice } from './format';
 import { SeatsBadge } from './SeatsBadge';
 
 /** Écran « Détail d'un événement » (US03). */
@@ -42,6 +42,14 @@ export function EventDetailPage() {
   return (
     <article className="page detail">
       {back}
+      {event.imageUrl ? (
+        <img className="detail__image" src={event.imageUrl} alt={`Visuel de ${event.title}`} />
+      ) : (
+        <div className="detail__image detail__image--placeholder" aria-hidden="true">
+          {event.category.name}
+        </div>
+      )}
+
       <header className="detail__header">
         <span className="card__category">{event.category.name}</span>
         <h1>{event.title}</h1>
@@ -60,6 +68,10 @@ export function EventDetailPage() {
             {event.venue}
             {event.address && <>, {event.address}</>} · {event.city}
           </dd>
+        </div>
+        <div>
+          <dt>Prix</dt>
+          <dd>{formatPrice(event.priceCents)}</dd>
         </div>
         <div>
           <dt>Organisateur</dt>
@@ -83,7 +95,14 @@ export function EventDetailPage() {
         <p>{event.description}</p>
       </section>
 
-      {/* Le bouton « S'inscrire » arrive avec US05 (Sprint 2). */}
+      <div className="detail__actions">
+        {/* Le bouton « S'inscrire » arrive avec US05 (Sprint 2) ; complet, il est remplacé par « Complet ». */}
+        {event.isFull && (
+          <button type="button" className="button" disabled>
+            Complet
+          </button>
+        )}
+      </div>
     </article>
   );
 }

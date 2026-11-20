@@ -13,6 +13,13 @@ const shortDate = new Intl.DateTimeFormat('fr-FR', {
   timeZone: 'Europe/Paris',
 });
 
+const euros = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
+
+/** Prix en centimes vers « 12,00 € », ou « Gratuit ». */
+export function formatPrice(priceCents: number): string {
+  return priceCents === 0 ? 'Gratuit' : euros.format(priceCents / 100);
+}
+
 export const formatDateTime = (iso: string) => dateTime.format(new Date(iso));
 export const formatShortDate = (iso: string) => shortDate.format(new Date(iso));
 

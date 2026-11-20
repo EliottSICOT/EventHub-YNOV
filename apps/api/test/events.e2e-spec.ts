@@ -74,6 +74,7 @@ describe('Catalogue des événements (e2e)', () => {
 
     ids.past = (await make('Passé', -5, 'Lyon', concert.id)).id;
     ids.jazz = (await make('Jazz à Lyon', 2, 'Lyon', concert.id)).id;
+    await prisma.event.update({ where: { id: ids.jazz }, data: { priceCents: 1800 } });
     ids.rock = (await make('Rock à Paris', 4, 'Paris', concert.id)).id;
     ids.run = (await make('Course à Lyon', 6, 'Lyon', sport.id)).id;
     ids.full = (await make('Complet', 8, 'Nantes', sport.id, 1)).id;
@@ -166,6 +167,7 @@ describe('Catalogue des événements (e2e)', () => {
         organizer: { name: 'Camille Martin' },
         category: { slug: 'concert' },
         remainingSeats: 100,
+        priceCents: 1800,
       });
     });
 

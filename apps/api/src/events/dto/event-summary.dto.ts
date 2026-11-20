@@ -24,6 +24,14 @@ export class EventSummaryDto {
   capacity: number;
 
   @ApiProperty({
+    type: 'integer',
+    example: 1500,
+    minimum: 0,
+    description: 'Prix en centimes d’euro (0 = gratuit)',
+  })
+  priceCents: number;
+
+  @ApiProperty({
     example: 42,
     minimum: 0,
     description: 'Places encore disponibles',

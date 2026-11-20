@@ -95,6 +95,11 @@ export interface components {
             /** @example 300 */
             capacity: number;
             /**
+             * @description Prix en centimes d’euro (0 = gratuit)
+             * @example 1500
+             */
+            priceCents: number;
+            /**
              * @description Places encore disponibles
              * @example 42
              */
@@ -172,6 +177,11 @@ export interface components {
             city: string;
             /** @example 300 */
             capacity: number;
+            /**
+             * @description Prix en centimes d’euro (0 = gratuit)
+             * @example 1500
+             */
+            priceCents: number;
             /**
              * @description Places encore disponibles
              * @example 42

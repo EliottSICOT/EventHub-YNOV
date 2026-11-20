@@ -1,6 +1,6 @@
 import { Link } from 'react-router';
 import type { EventSummary } from '../../api/types';
-import { formatShortDate } from './format';
+import { formatPrice, formatShortDate } from './format';
 import { SeatsBadge } from './SeatsBadge';
 
 export function EventCard({ event }: { event: EventSummary }) {
@@ -25,6 +25,7 @@ export function EventCard({ event }: { event: EventSummary }) {
       <p className="card__meta">
         {event.venue} · {event.city}
       </p>
+      <p className="card__price">{formatPrice(event.priceCents)}</p>
     </article>
   );
 }

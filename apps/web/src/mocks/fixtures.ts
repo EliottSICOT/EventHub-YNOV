@@ -58,6 +58,7 @@ function buildEvent(index: number, now: number): EventDetail {
     endsAt: new Date(start.getTime() + 3 * 60 * 60 * 1000).toISOString(),
     ...place,
     capacity,
+    priceCents: [0, 1200, 2500, 4500][index % 4],
     remainingSeats,
     isFull: remainingSeats === 0,
     imageUrl: null,

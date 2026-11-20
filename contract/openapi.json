@@ -232,6 +232,12 @@
             "example": 300,
             "minimum": 1
           },
+          "priceCents": {
+            "type": "integer",
+            "example": 1500,
+            "minimum": 0,
+            "description": "Prix en centimes d’euro (0 = gratuit)"
+          },
           "remainingSeats": {
             "type": "number",
             "example": 42,
@@ -259,6 +265,7 @@
           "venue",
           "city",
           "capacity",
+          "priceCents",
           "remainingSeats",
           "isFull",
           "imageUrl",
@@ -424,6 +431,12 @@
             "example": 300,
             "minimum": 1
           },
+          "priceCents": {
+            "type": "integer",
+            "example": 1500,
+            "minimum": 0,
+            "description": "Prix en centimes d’euro (0 = gratuit)"
+          },
           "remainingSeats": {
             "type": "number",
             "example": 42,
@@ -462,6 +475,7 @@
           "venue",
           "city",
           "capacity",
+          "priceCents",
           "remainingSeats",
           "isFull",
           "imageUrl",

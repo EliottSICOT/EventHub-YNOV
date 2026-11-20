@@ -134,6 +134,7 @@ async function main() {
           address,
           city: place.city,
           capacity,
+          priceCents: [0, 1200, 2500, 0, 4500][index % 5],
           categoryId: category.id,
           organizerId: organizers[index % organizers.length].id,
         },

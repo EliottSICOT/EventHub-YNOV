@@ -95,6 +95,7 @@ describe('EventsService', () => {
       address: null,
       city: 'Paris',
       capacity: 2,
+      priceCents: 1500,
       imageUrl: null,
       category: { id: 'c1', name: 'Meetup tech', slug: 'meetup-tech' },
       organizer: { id: 'u1', firstName: 'Camille', lastName: 'Martin' },
@@ -104,6 +105,7 @@ describe('EventsService', () => {
     const event = await service.findOne('e1');
 
     expect(event).toMatchObject({
+      priceCents: 1500,
       remainingSeats: 0,
       isFull: true,
       organizer: { id: 'u1', name: 'Camille Martin' },
