@@ -1,0 +1,17 @@
+node_modules/
+dist/
+dist-ssr/
+coverage/
+storybook-static/
+*.log
+*.local
+.env
+!.env.example
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Client Prisma généré (pnpm install le régénère)
+apps/api/src/generated/
+*.tsbuildinfo
