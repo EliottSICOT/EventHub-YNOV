@@ -1,0 +1,13 @@
+packages:
+  - apps/*
+allowBuilds:
+  '@prisma/engines': true
+  prisma: true
+  '@scarf/scarf': false
+  esbuild: true
+minimumReleaseAgeExclude:
+  - '@storybook/builder-vite@10.6.8'
+  - '@storybook/react-dom-shim@10.6.8'
+  - '@storybook/react-vite@10.6.8'
+  - '@storybook/react@10.6.8'
+  - storybook@10.6.8
