@@ -5,14 +5,15 @@
  */
 import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
+import * as argon2 from 'argon2';
 import { PrismaClient, Role } from '../src/generated/prisma/client.js';
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }),
 });
 
-// Hash factice tant que l'authentification (US04) n'existe pas.
-const PLACEHOLDER_HASH = 'not-a-real-hash';
+/** Mot de passe de tous les comptes de démo (documenté dans le README). */
+const DEMO_PASSWORD = 'eventhub-demo';
 
 const categories = [
   { name: 'Concert', slug: 'concert' },
@@ -80,6 +81,9 @@ async function main() {
   await prisma.category.deleteMany();
   await prisma.user.deleteMany();
 
+  // Un seul hash argon2 pour tous les comptes : le seed reste rapide.
+  const passwordHash = await argon2.hash(DEMO_PASSWORD);
+
   const createdCategories = await Promise.all(
     categories.map((data) => prisma.category.create({ data })),
   );
@@ -92,7 +96,7 @@ async function main() {
       prisma.user.create({
         data: {
           email: `${firstName.toLowerCase()}@eventhub.test`,
-          passwordHash: PLACEHOLDER_HASH,
+          passwordHash,
           firstName,
           lastName,
           role: Role.ORGANIZER,
@@ -106,7 +110,7 @@ async function main() {
       prisma.user.create({
         data: {
           email: `participant${i + 1}@eventhub.test`,
-          passwordHash: PLACEHOLDER_HASH,
+          passwordHash,
           firstName: 'Participant',
           lastName: String(i + 1),
         },
@@ -163,6 +167,9 @@ async function main() {
   });
 
   console.log(`Seed terminé : ${index + 1} événements, ${createdCategories.length} catégories.`);
+  console.log(
+    `Comptes de démo (mot de passe « ${DEMO_PASSWORD} ») : camille@eventhub.test (organisateur), participant1@eventhub.test (participant).`,
+  );
 }
 
 try {
