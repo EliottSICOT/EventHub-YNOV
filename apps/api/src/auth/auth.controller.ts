@@ -1,4 +1,15 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Req,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   ApiBadRequestResponse,
   ApiConflictResponse,
@@ -10,6 +21,7 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import type { Request, Response } from 'express';
 import { ApiErrorDto } from '../common/errors/api-error.dto.js';
 import { SESSION_COOKIE } from './auth.constants.js';
 import {
@@ -20,17 +32,28 @@ import {
   unauthenticatedExample,
   userExample,
 } from './auth.examples.js';
+import { AuthGuard } from './auth.guard.js';
 import { AuthService } from './auth.service.js';
+import { CurrentUser } from './current-user.decorator.js';
 import { SignInDto } from './dto/sign-in.dto.js';
 import { SignUpDto } from './dto/sign-up.dto.js';
 import { UserDto } from './dto/user.dto.js';
+import { clearSessionCookie, readSessionToken, setSessionCookie } from './session-cookie.js';
 
 export const SESSION_SECURITY = 'session';
 
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  /** Cookie `Secure` en production uniquement : en dev, le Front est servi en HTTP. */
+  private readonly secureCookie: boolean;
+
+  constructor(
+    private readonly authService: AuthService,
+    config: ConfigService,
+  ) {
+    this.secureCookie = config.get<string>('NODE_ENV') === 'production';
+  }
 
   @Post('sign-up')
   @ApiOperation({
@@ -83,8 +106,12 @@ export class AuthController {
     description: 'Identifiants invalides (message générique)',
     example: invalidCredentialsExample,
   })
-  async signIn(@Body() body: SignInDto): Promise<UserDto> {
-    const { user } = await this.authService.signIn(body);
+  async signIn(
+    @Body() body: SignInDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<UserDto> {
+    const { user, token } = await this.authService.signIn(body);
+    setSessionCookie(res, token, this.secureCookie);
     return user;
   }
 
@@ -97,8 +124,9 @@ export class AuthController {
       'US04 : supprime la session en base et efface le cookie. Idempotent : renvoie 204 même sans session valide.',
   })
   @ApiNoContentResponse({ description: 'Session supprimée' })
-  async signOut(): Promise<void> {
-    await this.authService.signOut(undefined);
+  async signOut(@Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<void> {
+    await this.authService.signOut(readSessionToken(req));
+    clearSessionCookie(res, this.secureCookie);
   }
 
   @Get('me')
@@ -114,7 +142,8 @@ export class AuthController {
     description: 'Pas de session, ou session expirée',
     example: unauthenticatedExample,
   })
-  me(): UserDto {
-    return this.authService.me();
+  @UseGuards(AuthGuard)
+  me(@CurrentUser() user: UserDto): UserDto {
+    return user;
   }
 }
