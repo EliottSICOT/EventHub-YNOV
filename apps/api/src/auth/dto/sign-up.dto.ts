@@ -1,15 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsEmail, IsNotEmpty, IsString, MaxLength, MinLength } from 'class-validator';
+import { normalizeEmailTransform } from '../email.js';
 
 export const PASSWORD_MIN_LENGTH = 8;
 export const PASSWORD_MAX_LENGTH = 128;
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
-
-/** Email normalisé : sans espaces autour et en minuscules. */
-export const normalizeEmail = ({ value }: { value: unknown }) =>
-  typeof value === 'string' ? value.trim().toLowerCase() : value;
 
 export class SignUpDto {
   @ApiProperty({ example: 'Léa', maxLength: 100 })
@@ -31,7 +28,7 @@ export class SignUpDto {
     format: 'email',
     description: 'Normalisé côté serveur : espaces retirés et passage en minuscules.',
   })
-  @Transform(normalizeEmail)
+  @Transform(normalizeEmailTransform)
   @IsEmail({}, { message: "L'email n'est pas valide" })
   @MaxLength(254, { message: "L'email ne doit pas dépasser 254 caractères" })
   email: string;

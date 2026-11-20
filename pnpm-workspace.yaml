@@ -5,6 +5,7 @@ allowBuilds:
   prisma: true
   '@scarf/scarf': false
   esbuild: true
+  argon2: true
 minimumReleaseAgeExclude:
   - '@storybook/builder-vite@10.6.8'
   - '@storybook/react-dom-shim@10.6.8'
