@@ -4,6 +4,86 @@
  */
 
 export interface paths {
+    "/api/v1/auth/sign-up": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Créer un compte participant
+         * @description US04 : crée un compte avec le rôle PARTICIPANT. N'ouvre pas de session : le client enchaîne avec `POST /auth/sign-in`.
+         */
+        post: operations["signUp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/sign-in": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Se connecter
+         * @description US04 : ouvre une session de 7 jours portée par le cookie HttpOnly `eventhub_session`. Des identifiants invalides renvoient toujours le même 401, sans préciser si l'email ou le mot de passe est faux.
+         */
+        post: operations["signIn"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/sign-out": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Se déconnecter
+         * @description US04 : supprime la session en base et efface le cookie. Idempotent : renvoie 204 même sans session valide.
+         */
+        post: operations["signOut"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Utilisateur connecté
+         * @description US04 : renvoie l’utilisateur de la session courante (le layout affiche son prénom).
+         */
+        get: operations["me"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/events": {
         parameters: {
             query?: never;
@@ -65,6 +145,81 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        SignUpDto: {
+            /** @example Léa */
+            firstName: string;
+            /** @example Dupont */
+            lastName: string;
+            /**
+             * Format: email
+             * @description Normalisé côté serveur : espaces retirés et passage en minuscules.
+             * @example lea.dupont@example.com
+             */
+            email: string;
+            /**
+             * Format: password
+             * @example motdepasse-solide
+             */
+            password: string;
+        };
+        /** @enum {string} */
+        Role: "PARTICIPANT" | "ORGANIZER";
+        UserDto: {
+            /**
+             * Format: uuid
+             * @example 3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11
+             */
+            id: string;
+            /**
+             * Format: email
+             * @example lea.dupont@example.com
+             */
+            email: string;
+            /** @example Léa */
+            firstName: string;
+            /** @example Dupont */
+            lastName: string;
+            /** @example PARTICIPANT */
+            role: components["schemas"]["Role"];
+        };
+        FieldErrorDto: {
+            /**
+             * @description Champ en erreur (notation pointée pour les objets imbriqués)
+             * @example pageSize
+             */
+            field: string;
+            /** @example pageSize doit être inférieur ou égal à 50 */
+            message: string;
+        };
+        ApiErrorDto: {
+            /** @example 404 */
+            statusCode: number;
+            /**
+             * @description Libellé HTTP du code de statut
+             * @example Not Found
+             */
+            error: string;
+            /** @example L'événement demandé n'existe pas */
+            message: string;
+            /** @description Présent uniquement pour les erreurs de validation (400) */
+            details?: components["schemas"]["FieldErrorDto"][];
+            /** @example /api/v1/events/0b6f… */
+            path: string;
+            /** Format: date-time */
+            timestamp: string;
+        };
+        SignInDto: {
+            /**
+             * Format: email
+             * @example lea.dupont@example.com
+             */
+            email: string;
+            /**
+             * Format: password
+             * @example motdepasse-solide
+             */
+            password: string;
+        };
         CategoryDto: {
             /** Format: uuid */
             id: string;
@@ -127,32 +282,6 @@ export interface components {
             data: components["schemas"]["EventSummaryDto"][];
             meta: components["schemas"]["PaginationMetaDto"];
         };
-        FieldErrorDto: {
-            /**
-             * @description Champ en erreur (notation pointée pour les objets imbriqués)
-             * @example pageSize
-             */
-            field: string;
-            /** @example pageSize doit être inférieur ou égal à 50 */
-            message: string;
-        };
-        ApiErrorDto: {
-            /** @example 404 */
-            statusCode: number;
-            /**
-             * @description Libellé HTTP du code de statut
-             * @example Not Found
-             */
-            error: string;
-            /** @example L'événement demandé n'existe pas */
-            message: string;
-            /** @description Présent uniquement pour les erreurs de validation (400) */
-            details?: components["schemas"]["FieldErrorDto"][];
-            /** @example /api/v1/events/0b6f… */
-            path: string;
-            /** Format: date-time */
-            timestamp: string;
-        };
         OrganizerDto: {
             /** Format: uuid */
             id: string;
@@ -206,6 +335,226 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    signUp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SignUpDto"];
+            };
+        };
+        responses: {
+            /** @description Compte créé */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11",
+                     *       "email": "lea.dupont@example.com",
+                     *       "firstName": "Léa",
+                     *       "lastName": "Dupont",
+                     *       "role": "PARTICIPANT"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["UserDto"];
+                };
+            };
+            /** @description Champ manquant ou invalide (mot de passe de moins de 8 caractères…) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "statusCode": 400,
+                     *       "error": "Bad Request",
+                     *       "message": "La requête contient des champs invalides",
+                     *       "details": [
+                     *         {
+                     *           "field": "email",
+                     *           "message": "L'email n'est pas valide"
+                     *         },
+                     *         {
+                     *           "field": "password",
+                     *           "message": "Le mot de passe doit contenir au moins 8 caractères"
+                     *         }
+                     *       ],
+                     *       "path": "/api/v1/auth/sign-up",
+                     *       "timestamp": "2026-11-20T10:33:21.774Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Email déjà utilisé */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "statusCode": 409,
+                     *       "error": "Conflict",
+                     *       "message": "Un compte existe déjà avec cet email",
+                     *       "path": "/api/v1/auth/sign-up",
+                     *       "timestamp": "2026-11-20T10:33:21.774Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    signIn: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SignInDto"];
+            };
+        };
+        responses: {
+            /** @description Connecté : renvoie l’utilisateur et pose le cookie de session */
+            200: {
+                headers: {
+                    /** @description Cookie de session HttpOnly, SameSite=Lax, Secure en production */
+                    "Set-Cookie"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11",
+                     *       "email": "lea.dupont@example.com",
+                     *       "firstName": "Léa",
+                     *       "lastName": "Dupont",
+                     *       "role": "PARTICIPANT"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["UserDto"];
+                };
+            };
+            /** @description Champ manquant */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "statusCode": 400,
+                     *       "error": "Bad Request",
+                     *       "message": "La requête contient des champs invalides",
+                     *       "details": [
+                     *         {
+                     *           "field": "password",
+                     *           "message": "Le mot de passe est obligatoire"
+                     *         }
+                     *       ],
+                     *       "path": "/api/v1/auth/sign-in",
+                     *       "timestamp": "2026-11-20T10:33:21.774Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Identifiants invalides (message générique) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "statusCode": 401,
+                     *       "error": "Unauthorized",
+                     *       "message": "Email ou mot de passe incorrect",
+                     *       "path": "/api/v1/auth/sign-in",
+                     *       "timestamp": "2026-11-20T10:33:21.774Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    signOut: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Session supprimée */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    me: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11",
+                     *       "email": "lea.dupont@example.com",
+                     *       "firstName": "Léa",
+                     *       "lastName": "Dupont",
+                     *       "role": "PARTICIPANT"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["UserDto"];
+                };
+            };
+            /** @description Pas de session, ou session expirée */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "statusCode": 401,
+                     *       "error": "Unauthorized",
+                     *       "message": "Authentification requise",
+                     *       "path": "/api/v1/auth/me",
+                     *       "timestamp": "2026-11-20T10:33:21.774Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     listEvents: {
         parameters: {
             query?: {
