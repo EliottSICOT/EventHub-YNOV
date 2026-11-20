@@ -1,0 +1,23 @@
+{
+  "name": "eventhub",
+  "private": true,
+  "packageManager": "pnpm@11.13.1",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter api --filter web dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "contract": "pnpm --filter api openapi:generate && pnpm --filter web api:types",
+    "db:up": "docker compose up -d postgres mailpit",
+    "db:down": "docker compose down",
+    "format": "prettier --write \"apps/*/src/**/*.{ts,tsx,css}\" \"apps/*/test/**/*.ts\" \"apps/api/prisma/**/*.ts\" \"apps/web/.storybook/**/*.{ts,tsx}\"",
+    "format:check": "prettier --check \"apps/*/src/**/*.{ts,tsx,css}\" \"apps/*/test/**/*.ts\" \"apps/api/prisma/**/*.ts\" \"apps/web/.storybook/**/*.{ts,tsx}\""
+  },
+  "devDependencies": {
+    "prettier": "^3.10.1"
+  }
+}

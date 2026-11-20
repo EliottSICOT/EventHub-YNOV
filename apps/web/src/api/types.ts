@@ -1,0 +1,10 @@
+import type { components } from './schema';
+
+type Schemas = components['schemas'];
+
+export type Category = Schemas['CategoryDto'];
+export type EventSummary = Schemas['EventSummaryDto'];
+export type EventDetail = Schemas['EventDetailDto'];
+export type PaginatedEvents = Schemas['PaginatedEventsDto'];
+export type ApiErrorBody = Schemas['ApiErrorDto'];
+export type FieldError = Schemas['FieldErrorDto'];
