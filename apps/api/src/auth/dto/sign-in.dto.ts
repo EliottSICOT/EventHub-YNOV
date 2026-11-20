@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsNotEmpty, IsString } from 'class-validator';
-import { normalizeEmail } from './sign-up.dto.js';
+import { normalizeEmailTransform } from '../email.js';
 
 /**
  * Pas de règle de longueur ni de format ici : un identifiant mal formé
@@ -9,7 +9,7 @@ import { normalizeEmail } from './sign-up.dto.js';
  */
 export class SignInDto {
   @ApiProperty({ example: 'lea.dupont@example.com', format: 'email' })
-  @Transform(normalizeEmail)
+  @Transform(normalizeEmailTransform)
   @IsString({ message: 'email doit être une chaîne de caractères' })
   @IsNotEmpty({ message: "L'email est obligatoire" })
   email: string;
