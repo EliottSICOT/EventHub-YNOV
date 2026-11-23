@@ -1,6 +1,252 @@
 {
   "openapi": "3.0.0",
   "paths": {
+    "/api/v1/auth/sign-up": {
+      "post": {
+        "description": "US04 : crée un compte avec le rôle PARTICIPANT. N'ouvre pas de session : le client enchaîne avec `POST /auth/sign-in`.",
+        "operationId": "signUp",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignUpDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Compte créé",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserDto"
+                },
+                "example": {
+                  "id": "3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11",
+                  "email": "lea.dupont@example.com",
+                  "firstName": "Léa",
+                  "lastName": "Dupont",
+                  "role": "PARTICIPANT"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Champ manquant ou invalide (mot de passe de moins de 8 caractères…)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "statusCode": 400,
+                  "error": "Bad Request",
+                  "message": "La requête contient des champs invalides",
+                  "details": [
+                    {
+                      "field": "email",
+                      "message": "L'email n'est pas valide"
+                    },
+                    {
+                      "field": "password",
+                      "message": "Le mot de passe doit contenir au moins 8 caractères"
+                    }
+                  ],
+                  "path": "/api/v1/auth/sign-up",
+                  "timestamp": "2026-11-20T10:33:21.774Z"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Email déjà utilisé",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "statusCode": 409,
+                  "error": "Conflict",
+                  "message": "Un compte existe déjà avec cet email",
+                  "path": "/api/v1/auth/sign-up",
+                  "timestamp": "2026-11-20T10:33:21.774Z"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Créer un compte participant",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/sign-in": {
+      "post": {
+        "description": "US04 : ouvre une session de 7 jours portée par le cookie HttpOnly `eventhub_session`. Des identifiants invalides renvoient toujours le même 401, sans préciser si l'email ou le mot de passe est faux.",
+        "operationId": "signIn",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignInDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Connecté : renvoie l’utilisateur et pose le cookie de session",
+            "headers": {
+              "Set-Cookie": {
+                "description": "Cookie de session HttpOnly, SameSite=Lax, Secure en production",
+                "schema": {
+                  "type": "string",
+                  "example": "eventhub_session=kq3…Zx; Max-Age=604800; Path=/; HttpOnly; SameSite=Lax"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserDto"
+                },
+                "example": {
+                  "id": "3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11",
+                  "email": "lea.dupont@example.com",
+                  "firstName": "Léa",
+                  "lastName": "Dupont",
+                  "role": "PARTICIPANT"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Champ manquant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "statusCode": 400,
+                  "error": "Bad Request",
+                  "message": "La requête contient des champs invalides",
+                  "details": [
+                    {
+                      "field": "password",
+                      "message": "Le mot de passe est obligatoire"
+                    }
+                  ],
+                  "path": "/api/v1/auth/sign-in",
+                  "timestamp": "2026-11-20T10:33:21.774Z"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Identifiants invalides (message générique)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "statusCode": 401,
+                  "error": "Unauthorized",
+                  "message": "Email ou mot de passe incorrect",
+                  "path": "/api/v1/auth/sign-in",
+                  "timestamp": "2026-11-20T10:33:21.774Z"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Se connecter",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/sign-out": {
+      "post": {
+        "description": "US04 : supprime la session en base et efface le cookie. Idempotent : renvoie 204 même sans session valide.",
+        "operationId": "signOut",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "Session supprimée"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Se déconnecter",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "description": "US04 : renvoie l’utilisateur de la session courante (le layout affiche son prénom).",
+        "operationId": "me",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserDto"
+                },
+                "example": {
+                  "id": "3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11",
+                  "email": "lea.dupont@example.com",
+                  "firstName": "Léa",
+                  "lastName": "Dupont",
+                  "role": "PARTICIPANT"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Pas de session, ou session expirée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "statusCode": 401,
+                  "error": "Unauthorized",
+                  "message": "Authentification requise",
+                  "path": "/api/v1/auth/me",
+                  "timestamp": "2026-11-20T10:33:21.774Z"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Utilisateur connecté",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/events": {
       "get": {
         "description": "US01 et US02 : liste triée par date de début croissante, filtrable par période, catégorie et ville. Les filtres se combinent.",
@@ -174,7 +420,171 @@
   "tags": [],
   "servers": [],
   "components": {
+    "securitySchemes": {
+      "session": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "eventhub_session",
+        "description": "Posé par `POST /auth/sign-in`"
+      }
+    },
     "schemas": {
+      "SignUpDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "example": "Léa",
+            "maxLength": 100
+          },
+          "lastName": {
+            "type": "string",
+            "example": "Dupont",
+            "maxLength": 100
+          },
+          "email": {
+            "type": "string",
+            "example": "lea.dupont@example.com",
+            "format": "email",
+            "description": "Normalisé côté serveur : espaces retirés et passage en minuscules."
+          },
+          "password": {
+            "type": "string",
+            "example": "motdepasse-solide",
+            "format": "password",
+            "minLength": 8,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "firstName",
+          "lastName",
+          "email",
+          "password"
+        ]
+      },
+      "Role": {
+        "type": "string",
+        "enum": [
+          "PARTICIPANT",
+          "ORGANIZER"
+        ]
+      },
+      "UserDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "lea.dupont@example.com"
+          },
+          "firstName": {
+            "type": "string",
+            "example": "Léa"
+          },
+          "lastName": {
+            "type": "string",
+            "example": "Dupont"
+          },
+          "role": {
+            "example": "PARTICIPANT",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Role"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "firstName",
+          "lastName",
+          "role"
+        ]
+      },
+      "FieldErrorDto": {
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string",
+            "example": "pageSize",
+            "description": "Champ en erreur (notation pointée pour les objets imbriqués)"
+          },
+          "message": {
+            "type": "string",
+            "example": "pageSize doit être inférieur ou égal à 50"
+          }
+        },
+        "required": [
+          "field",
+          "message"
+        ]
+      },
+      "ApiErrorDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "example": 404
+          },
+          "error": {
+            "type": "string",
+            "example": "Not Found",
+            "description": "Libellé HTTP du code de statut"
+          },
+          "message": {
+            "type": "string",
+            "example": "L'événement demandé n'existe pas"
+          },
+          "details": {
+            "description": "Présent uniquement pour les erreurs de validation (400)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FieldErrorDto"
+            }
+          },
+          "path": {
+            "type": "string",
+            "example": "/api/v1/events/0b6f…"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "statusCode",
+          "error",
+          "message",
+          "path",
+          "timestamp"
+        ]
+      },
+      "SignInDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "lea.dupont@example.com",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "example": "motdepasse-solide",
+            "format": "password"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
       "CategoryDto": {
         "type": "object",
         "properties": {
@@ -320,64 +730,6 @@
         "required": [
           "data",
           "meta"
-        ]
-      },
-      "FieldErrorDto": {
-        "type": "object",
-        "properties": {
-          "field": {
-            "type": "string",
-            "example": "pageSize",
-            "description": "Champ en erreur (notation pointée pour les objets imbriqués)"
-          },
-          "message": {
-            "type": "string",
-            "example": "pageSize doit être inférieur ou égal à 50"
-          }
-        },
-        "required": [
-          "field",
-          "message"
-        ]
-      },
-      "ApiErrorDto": {
-        "type": "object",
-        "properties": {
-          "statusCode": {
-            "type": "number",
-            "example": 404
-          },
-          "error": {
-            "type": "string",
-            "example": "Not Found",
-            "description": "Libellé HTTP du code de statut"
-          },
-          "message": {
-            "type": "string",
-            "example": "L'événement demandé n'existe pas"
-          },
-          "details": {
-            "description": "Présent uniquement pour les erreurs de validation (400)",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/FieldErrorDto"
-            }
-          },
-          "path": {
-            "type": "string",
-            "example": "/api/v1/events/0b6f…"
-          },
-          "timestamp": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "statusCode",
-          "error",
-          "message",
-          "path",
-          "timestamp"
         ]
       },
       "OrganizerDto": {

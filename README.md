@@ -13,7 +13,7 @@ Plateforme de gestion d'événements : un visiteur consulte le catalogue, un par
 ```text
 EventHub-YNOV/
 ├── apps/
-│   ├── api/          NestJS + Prisma (modules events, categories ; auth et registrations à venir)
+│   ├── api/          NestJS + Prisma (modules auth, events, categories ; registrations à venir)
 │   └── web/          SPA React (écrans Liste et Détail ; mocks MSW dans src/mocks)
 ├── contract/
 │   └── openapi.json  contrat généré par l'API, source des types du Front
@@ -30,7 +30,7 @@ pnpm install                      # installe tout et génère le client Prisma
 pnpm db:up                        # lance PostgreSQL (5432) et Mailpit (http://localhost:8025)
 cp apps/api/.env.example apps/api/.env
 pnpm --filter api db:migrate      # applique les migrations
-pnpm --filter api db:seed         # 20 événements de démo, dont des complets
+pnpm --filter api db:seed         # 20 événements de démo, dont des complets, et des comptes de démo
 pnpm dev                          # API sur :3000, Front sur :5173
 ```
 
@@ -38,6 +38,17 @@ pnpm dev                          # API sur :3000, Front sur :5173
 - Documentation de l'API (Swagger UI) : <http://localhost:3000/api/docs>
 
 En dev, Vite redirige `/api` vers l'API : le Front et l'API partagent la même origine.
+
+### Comptes de démo
+
+Créés par le seed, tous avec le mot de passe `eventhub-demo` :
+
+| Rôle         | Email                        |
+| ------------ | ---------------------------- |
+| Participant  | `participant1@eventhub.test` |
+| Organisateur | `camille@eventhub.test`      |
+
+Les autres comptes du seed (`participant2` à `participant40`, `yanis@eventhub.test`) utilisent le même mot de passe.
 
 ### Front sans API (mocks)
 
@@ -73,15 +84,26 @@ Toutes les erreurs suivent `ApiErrorDto` :
 
 `details` n'est présent que pour les erreurs de validation : les formulaires Réservation et Inscription s'en serviront pour afficher les erreurs champ par champ.
 
-## Endpoints (Sprint 1)
+## Endpoints
 
-| Méthode | Chemin                | Story      | Description                                                                                      |
-| ------- | --------------------- | ---------- | ------------------------------------------------------------------------------------------------ |
-| GET     | `/api/v1/events`      | US01, US02 | Catalogue paginé (`page`, `pageSize` ≤ 50), filtres combinables `from`, `to`, `category`, `city` |
-| GET     | `/api/v1/events/{id}` | US03       | Détail : description, organisateur, places restantes ; 404 si inconnu                            |
-| GET     | `/api/v1/categories`  | US02       | Catégories pour le filtre                                                                        |
+| Méthode | Chemin                  | Story      | Description                                                                                      |
+| ------- | ----------------------- | ---------- | ------------------------------------------------------------------------------------------------ |
+| GET     | `/api/v1/events`        | US01, US02 | Catalogue paginé (`page`, `pageSize` ≤ 50), filtres combinables `from`, `to`, `category`, `city` |
+| GET     | `/api/v1/events/{id}`   | US03       | Détail : description, organisateur, places restantes ; 404 si inconnu                            |
+| GET     | `/api/v1/categories`    | US02       | Catégories pour le filtre                                                                        |
+| POST    | `/api/v1/auth/sign-up`  | US04       | Création d'un compte participant ; 400 avec `details`, 409 si l'email est pris                   |
+| POST    | `/api/v1/auth/sign-in`  | US04       | Connexion : pose le cookie de session ; 401 générique si les identifiants sont faux              |
+| POST    | `/api/v1/auth/sign-out` | US04       | Déconnexion : supprime la session en base et efface le cookie ; 204                              |
+| GET     | `/api/v1/auth/me`       | US04       | Utilisateur connecté (id, email, prénom, nom, rôle) ; 401 sans session                           |
 
 Sans `from`, le catalogue n'affiche que les événements à venir. Une date seule dans `to` inclut toute la journée.
+
+### Authentification
+
+- Session côté serveur (table `sessions`), portée par le cookie `eventhub_session` : HttpOnly, SameSite=Lax, Secure quand `NODE_ENV=production`, valable 7 jours. La base ne stocke que l'empreinte SHA-256 du jeton.
+- Le Front appelle l'API avec `credentials: 'include'` ; hors proxy Vite, le CORS n'autorise que l'origine `FRONT_URL`.
+- Mots de passe hachés avec argon2id, 8 caractères minimum. L'email est normalisé (espaces retirés, minuscules).
+- Côté API, une route se protège avec `@UseGuards(AuthGuard)` et lit l'utilisateur avec `@CurrentUser()`. Pour la restreindre à un rôle : `@UseGuards(AuthGuard, RolesGuard) @Roles(Role.ORGANIZER)` (403 sinon).
 
 ## Scripts
 
@@ -107,11 +129,11 @@ Les tests e2e créent la base `eventhub_test` si besoin et refusent de tourner s
 
 ## Avancement
 
-| Sprint | Stories              | État    |
-| ------ | -------------------- | ------- |
-| 1      | US01, US02, US03     | Livré   |
-| 2      | US04, US05           | À venir |
-| 3      | US06 à US09          | À venir |
-| 4      | US10 à US13 (+ US14) | À venir |
+| Sprint | Stories              | État                                    |
+| ------ | -------------------- | --------------------------------------- |
+| 1      | US01, US02, US03     | Livré                                   |
+| 2      | US04, US05           | En cours : US04 côté API, Front à venir |
+| 3      | US06 à US09          | À venir                                 |
+| 4      | US10 à US13 (+ US14) | À venir                                 |
 
-Le schéma Prisma contient déjà `users` et `registrations` : les places restantes se calculent à partir des inscriptions. Le seed crée des utilisateurs avec un mot de passe factice en attendant l'authentification (US04).
+Le schéma Prisma contient déjà `users` et `registrations` : les places restantes se calculent à partir des inscriptions.
