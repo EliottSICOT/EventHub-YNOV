@@ -8,3 +8,7 @@ export type EventDetail = Schemas['EventDetailDto'];
 export type PaginatedEvents = Schemas['PaginatedEventsDto'];
 export type ApiErrorBody = Schemas['ApiErrorDto'];
 export type FieldError = Schemas['FieldErrorDto'];
+export type User = Schemas['UserDto'];
+export type Role = Schemas['Role'];
+export type SignUpInput = Schemas['SignUpDto'];
+export type SignInInput = Schemas['SignInDto'];
