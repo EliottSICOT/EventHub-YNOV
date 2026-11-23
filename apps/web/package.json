@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint src",
     "preview": "vite preview",
-    "dev:mock": "VITE_API_MOCKS=true vite",
+    "dev:mock": "vite --mode mock",
     "typecheck": "tsc -b",
     "test": "vitest run",
     "test:watch": "vitest",
