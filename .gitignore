@@ -16,3 +16,6 @@ CLAUDE.md
 # Client Prisma généré (pnpm install le régénère)
 apps/api/src/generated/
 *.tsbuildinfo
+
+# Images envoyées en dev (US08, UPLOADS_DIR)
+apps/api/uploads/

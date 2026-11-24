@@ -223,8 +223,52 @@ a.button {
   background: var(--color-bg);
   color: var(--color-text);
 }
-.field input[aria-invalid='true'] {
+.field textarea,
+.field select {
+  font: inherit;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+.field textarea {
+  resize: vertical;
+}
+.field input[aria-invalid='true'],
+.field textarea[aria-invalid='true'],
+.field select[aria-invalid='true'] {
   border-color: var(--color-error);
+}
+.form__row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+/* Écrans organisateur (US08) */
+.organizer {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+/* Bandeau de confirmation ou d'avertissement */
+.notice {
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  font-weight: 600;
+}
+.notice--success {
+  border-color: var(--color-ok-text);
+  background: var(--color-ok-bg);
+  color: var(--color-ok-text);
+}
+.notice--warning {
+  border-color: var(--color-error);
+  background: var(--color-full-bg);
+  color: var(--color-full-text);
 }
 .field__hint,
 .field__error {

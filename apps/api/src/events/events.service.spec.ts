@@ -1,8 +1,10 @@
 import { NotFoundException } from '@nestjs/common';
+import { ValidationException } from '../common/errors/validation.exception.js';
 import { Test } from '@nestjs/testing';
 import { vi } from 'vitest';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { buildEventsWhere, EventsService } from './events.service.js';
+import type { CreateEventDto } from './dto/create-event.dto.js';
+import { buildEventsWhere, CATEGORY_NOT_FOUND_MESSAGE, EventsService } from './events.service.js';
 import { remainingSeats } from './events.mapper.js';
 
 const NOW = new Date('2026-11-20T10:00:00.000Z');
@@ -64,7 +66,8 @@ describe('remainingSeats', () => {
 describe('EventsService', () => {
   const prismaMock = {
     $transaction: vi.fn((queries: Promise<unknown>[]) => Promise.all(queries)),
-    event: { findMany: vi.fn(), count: vi.fn(), findUnique: vi.fn() },
+    event: { findMany: vi.fn(), count: vi.fn(), findUnique: vi.fn(), create: vi.fn() },
+    category: { findUnique: vi.fn() },
   };
   let service: EventsService;
 
@@ -124,6 +127,87 @@ describe('EventsService', () => {
       isFull: true,
       organizer: { id: 'u1', name: 'Camille Martin' },
       startsAt: NOW.toISOString(),
+    });
+  });
+
+  describe('create (US08)', () => {
+    const input = {
+      title: 'Nuit du jazz',
+      description: 'Trois quartets sur scène.',
+      categoryId: 'c1',
+      startsAt: '2026-12-05T18:00:00.000Z',
+      venue: 'Le Transbordeur',
+      city: 'Lyon',
+      capacity: 300,
+      priceCents: 0,
+    } satisfies CreateEventDto;
+    const created = {
+      ...input,
+      id: 'e1',
+      startsAt: new Date(input.startsAt),
+      endsAt: null,
+      address: null,
+      imageUrl: null,
+      category: { id: 'c1', name: 'Concert', slug: 'concert' },
+      organizer: { id: 'orga', firstName: 'Camille', lastName: 'Martin' },
+      _count: { registrations: 0 },
+    };
+
+    it("crée l'événement au nom de l'organisateur connecté", async () => {
+      prismaMock.category.findUnique.mockResolvedValue({ id: 'c1' });
+      prismaMock.event.create.mockResolvedValue(created);
+
+      const event = await service.create(input, 'orga');
+
+      expect(prismaMock.event.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            title: 'Nuit du jazz',
+            startsAt: new Date('2026-12-05T18:00:00.000Z'),
+            endsAt: null,
+            address: null,
+            priceCents: 0,
+            categoryId: 'c1',
+            organizerId: 'orga',
+          }),
+        }),
+      );
+      expect(event).toMatchObject({
+        id: 'e1',
+        remainingSeats: 300,
+        isFull: false,
+        organizer: { id: 'orga', name: 'Camille Martin' },
+      });
+    });
+
+    it('convertit la date de fin et garde l’adresse', async () => {
+      prismaMock.category.findUnique.mockResolvedValue({ id: 'c1' });
+      prismaMock.event.create.mockResolvedValue(created);
+
+      await service.create(
+        { ...input, endsAt: '2026-12-05T21:00:00.000Z', address: '3 bd Stalingrad' },
+        'orga',
+      );
+
+      expect(prismaMock.event.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            endsAt: new Date('2026-12-05T21:00:00.000Z'),
+            address: '3 bd Stalingrad',
+          }),
+        }),
+      );
+    });
+
+    it('refuse une catégorie inconnue avec une 400 sur le champ categoryId', async () => {
+      prismaMock.category.findUnique.mockResolvedValue(null);
+
+      const attempt = service.create(input, 'orga');
+      await expect(attempt).rejects.toBeInstanceOf(ValidationException);
+      await expect(attempt).rejects.toMatchObject({
+        details: [{ field: 'categoryId', message: CATEGORY_NOT_FOUND_MESSAGE }],
+      });
+      expect(prismaMock.event.create).not.toHaveBeenCalled();
     });
   });
 });

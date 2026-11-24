@@ -13,3 +13,4 @@ export type Role = Schemas['Role'];
 export type SignUpInput = Schemas['SignUpDto'];
 export type SignInInput = Schemas['SignInDto'];
 export type UserRegistration = Schemas['UserRegistrationDto'];
+export type CreateEventInput = Schemas['CreateEventDto'];
