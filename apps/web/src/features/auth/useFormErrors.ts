@@ -11,7 +11,7 @@ export function useFormErrors<Field extends string>(
 ) {
   const [errors, setErrors] = useState<FormErrors<Field>>({ fields: {} });
   const [focusRequest, setFocusRequest] = useState(0);
-  const fieldRefs = useRef(new Map<Field, HTMLInputElement | null>());
+  const fieldRefs = useRef(new Map<Field, HTMLElement | null>());
   const formAlertRef = useRef<HTMLParagraphElement | null>(null);
 
   // Nouvelles erreurs renvoyées par le serveur : on les affiche et on y amène le focus.
@@ -52,7 +52,7 @@ export function useFormErrors<Field extends string>(
     reset() {
       setErrors({ fields: {} });
     },
-    fieldRef: (field: Field) => (element: HTMLInputElement | null) => {
+    fieldRef: (field: Field) => (element: HTMLElement | null) => {
       fieldRefs.current.set(field, element);
     },
     formAlertRef,
