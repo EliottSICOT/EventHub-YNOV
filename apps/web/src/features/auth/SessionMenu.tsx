@@ -16,6 +16,7 @@ export function SessionMenu() {
   if (user) {
     return (
       <div className="session">
+        <Link to="/mes-inscriptions">Mes inscriptions</Link>
         <span className="session__greeting">Bonjour {user.firstName}</span>
         <button
           type="button"
