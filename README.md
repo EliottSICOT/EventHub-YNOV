@@ -96,7 +96,7 @@ Toutes les erreurs suivent `ApiErrorDto` :
 | POST    | `/api/v1/auth/sign-out` | US04       | Déconnexion : supprime la session en base et efface le cookie ; 204                              |
 | GET     | `/api/v1/auth/me`       | US04       | Utilisateur connecté (id, email, prénom, nom, rôle) ; 401 sans session                           |
 
-Sans `from`, le catalogue n'affiche que les événements à venir. Une date seule dans `to` inclut toute la journée.
+Le catalogue n'affiche jamais d'événement passé : sans `from`, il part de maintenant, et un `from` dans le passé est ramené à maintenant. Une date seule dans `to` inclut toute la journée. Côté Front, le champ « Du » n'accepte pas de date passée, et une page au-delà de la dernière (`?page=99`) est remplacée par la dernière page existante.
 
 ### Authentification
 
