@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http as mswHttp, HttpResponse } from 'msw';
 import { api } from '../../api/client';
@@ -8,6 +8,7 @@ import { createHandlers } from '../../mocks/handlers';
 import { mockRegistrations } from '../../mocks/registrations';
 import { server } from '../../mocks/server';
 import { renderApp } from '../../test/render';
+import { meQueryKey } from '../auth/api';
 import { formatDateTime } from '../events/format';
 
 const [participant, organizer] = demoUsers;
@@ -238,19 +239,16 @@ describe('Mes inscriptions (US07, Front)', () => {
   it("n'affiche jamais les inscriptions du compte précédent", async () => {
     signIn();
     mockRegistrations.add(upcoming.id, participant.id);
-    const user = userEvent.setup();
-    const { router } = renderApp('/mes-inscriptions');
+    const { queryClient } = renderApp('/mes-inscriptions');
     await screen.findByRole('link', { name: upcoming.title });
-
-    await user.click(screen.getByRole('button', { name: 'Déconnexion' }));
-    await user.click(await screen.findByRole('link', { name: 'Connexion' }));
-    await logIn(user, organizer.email);
-    await screen.findByText(`Bonjour ${organizer.firstName}`);
 
     // La réponse de l'API est retenue : seul le cache pourrait afficher quelque chose.
     server.use(mswHttp.get('*/api/v1/registrations/me', () => delay('infinite')));
-    await router.navigate('/mes-inscriptions');
+    // Changement de compte, comme après une connexion (`useSignIn` alimente cette clé).
+    mockAuth.signIn(organizer.email);
+    act(() => queryClient.setQueryData(meQueryKey, organizer));
 
+    expect(await screen.findByText(`Bonjour ${organizer.firstName}`)).toBeInTheDocument();
     expect(await screen.findByText('Chargement de vos inscriptions…')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: upcoming.title })).not.toBeInTheDocument();
   });
