@@ -3,7 +3,7 @@ import { useMe, useSignOut } from './api';
 
 const AUTH_PAGES = ['/connexion', '/inscription'];
 
-/** Zone de session du layout : « Bonjour {prénom} » et Déconnexion, ou Connexion / Inscription. */
+/** Zone de session du layout : Mes inscriptions, « Bonjour {prénom} » et Déconnexion, ou Connexion / Inscription. */
 export function SessionMenu() {
   const { data: user, isPending } = useMe();
   const signOut = useSignOut();
@@ -16,6 +16,7 @@ export function SessionMenu() {
   if (user) {
     return (
       <div className="session">
+        <Link to="/me/registrations">Mes inscriptions</Link>
         <span className="session__greeting">Bonjour {user.firstName}</span>
         <button
           type="button"
