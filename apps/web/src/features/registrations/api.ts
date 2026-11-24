@@ -1,13 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, unwrap } from '../../api/client';
+import { api, ApiError, unwrap } from '../../api/client';
 import { queryKeys } from '../../api/queries';
-import type { EventDetail } from '../../api/types';
+import type { ApiErrorBody, EventDetail } from '../../api/types';
 import { meQueryKey, useMe } from '../auth/api';
 
-const REGISTRATIONS_KEY = 'my-registrations';
+/** Préfixe commun : invalider cette clé recharge la liste, quel que soit l'utilisateur. */
+export const myRegistrationsKey = ['registrations', 'me'] as const;
 
 /**
- * Inscriptions de l'utilisateur connecté, à venir et passées (US07).
+ * Inscriptions de l'utilisateur connecté, passées comprises (US06, US07).
  * La clé porte l'identifiant de l'utilisateur : après un changement de compte,
  * le cache du précédent n'est jamais affiché.
  */
@@ -15,10 +16,10 @@ export function useMyRegistrations() {
   const queryClient = useQueryClient();
   const { data: user } = useMe();
   return useQuery({
-    queryKey: [REGISTRATIONS_KEY, user?.id],
+    queryKey: [...myRegistrationsKey, user?.id],
     enabled: Boolean(user),
     queryFn: async ({ signal }) => {
-      const result = await api.GET('/api/v1/me/registrations', { signal });
+      const result = await api.GET('/api/v1/registrations/me', { signal });
       // Session expirée : oublier l'utilisateur, `RequireAuth` renvoie alors vers la connexion.
       if (result.response.status === 401) queryClient.setQueryData(meQueryKey, null);
       return unwrap(result);
@@ -49,10 +50,32 @@ export function useRegister(eventId: string) {
         queryKey: ['events'],
         predicate: (query) => query.queryKey[1] !== 'detail',
       });
-      void queryClient.invalidateQueries({ queryKey: [REGISTRATIONS_KEY] });
+      void queryClient.invalidateQueries({ queryKey: myRegistrationsKey });
     },
     onError: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.event(eventId) });
     },
+  });
+}
+
+/**
+ * Annule l'inscription `registrationId` (US06). La place est libérée côté API :
+ * on recharge la liste des inscriptions et tous les événements (jauges des listes et des détails).
+ */
+export function useCancelRegistration() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (registrationId: string) => {
+      const { response, error } = await api.DELETE('/api/v1/registrations/{id}', {
+        params: { path: { id: registrationId } },
+      });
+      // 204 sans corps : `unwrap` n'est pas adapté.
+      if (!response.ok) throw new ApiError(response.status, error as ApiErrorBody | undefined);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['events'] });
+    },
+    // Succès ou refus (403, 404, 409), la liste doit refléter l'état réel.
+    onSettled: () => queryClient.invalidateQueries({ queryKey: myRegistrationsKey }),
   });
 }

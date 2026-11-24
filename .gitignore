@@ -11,6 +11,7 @@ storybook-static/
 .idea/
 .vscode/*
 !.vscode/extensions.json
+CLAUDE.md
 
 # Client Prisma généré (pnpm install le régénère)
 apps/api/src/generated/
