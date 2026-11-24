@@ -89,6 +89,29 @@ a {
   max-width: 1120px;
   margin: 0 auto;
   padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+/* Zone de session : hauteur fixe pour que rien ne bouge pendant le chargement de /auth/me */
+.session {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 36px;
+  font-weight: 600;
+}
+.session a {
+  text-decoration: none;
+}
+.session__greeting {
+  color: var(--color-text);
+}
+.session__error {
+  color: var(--color-error);
+  font-size: 0.85rem;
 }
 .brand {
   font-weight: 800;
@@ -137,6 +160,81 @@ a {
 .button--ghost {
   background: transparent;
   color: var(--color-primary);
+}
+.button--small {
+  padding: 5px 12px;
+  font-size: 0.9rem;
+}
+a.button {
+  display: inline-block;
+  text-decoration: none;
+}
+
+/* Formulaires d'authentification */
+.auth {
+  max-width: 440px;
+  margin: 0 auto;
+}
+.auth__header p {
+  margin: 6px 0 0;
+}
+.auth__switch {
+  margin: 0;
+  text-align: center;
+}
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.form__alert {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--color-error);
+  border-radius: 8px;
+  background: var(--color-full-bg);
+  color: var(--color-full-text);
+  font-weight: 600;
+}
+.form__submit {
+  padding: 10px 16px;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.field label {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.field input {
+  font: inherit;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+.field input[aria-invalid='true'] {
+  border-color: var(--color-error);
+}
+.field__hint,
+.field__error {
+  margin: 0;
+  font-size: 0.85rem;
+}
+.field__hint {
+  color: var(--color-muted);
+}
+.field__error {
+  color: var(--color-error);
+  font-weight: 600;
 }
 
 /* Filtres */

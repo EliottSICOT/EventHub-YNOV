@@ -14,7 +14,7 @@ Plateforme de gestion d'événements : un visiteur consulte le catalogue, un par
 EventHub-YNOV/
 ├── apps/
 │   ├── api/          NestJS + Prisma (modules auth, events, categories ; registrations à venir)
-│   └── web/          SPA React (écrans Liste et Détail ; mocks MSW dans src/mocks)
+│   └── web/          SPA React (Liste, Détail, Inscription, Connexion ; mocks MSW dans src/mocks)
 ├── contract/
 │   └── openapi.json  contrat généré par l'API, source des types du Front
 ├── docker-compose.yml  PostgreSQL + Mailpit
@@ -56,7 +56,7 @@ Les autres comptes du seed (`participant2` à `participant40`, `yanis@eventhub.t
 pnpm --filter web dev:mock
 ```
 
-Le Front tourne alors sur les handlers MSW de `apps/web/src/mocks`, typés par le contrat : ils reproduisent les filtres, la pagination et les erreurs 404 de l'API.
+Le Front tourne alors sur les handlers MSW de `apps/web/src/mocks`, typés par le contrat : ils reproduisent les filtres, la pagination et les erreurs 404 de l'API, ainsi que l'authentification (inscription, connexion, déconnexion, `/auth/me`) avec les mêmes comptes de démo. La session simulée est gardée dans le `sessionStorage` de l'onglet : elle survit à un rafraîchissement, comme le cookie de l'API.
 
 ## Workflow du contrat OpenAPI
 
@@ -129,11 +129,11 @@ Les tests e2e créent la base `eventhub_test` si besoin et refusent de tourner s
 
 ## Avancement
 
-| Sprint | Stories              | État                                    |
-| ------ | -------------------- | --------------------------------------- |
-| 1      | US01, US02, US03     | Livré                                   |
-| 2      | US04, US05           | En cours : US04 côté API, Front à venir |
-| 3      | US06 à US09          | À venir                                 |
-| 4      | US10 à US13 (+ US14) | À venir                                 |
+| Sprint | Stories              | État                                 |
+| ------ | -------------------- | ------------------------------------ |
+| 1      | US01, US02, US03     | Livré                                |
+| 2      | US04, US05           | En cours : US04 livrée, US05 à venir |
+| 3      | US06 à US09          | À venir                              |
+| 4      | US10 à US13 (+ US14) | À venir                              |
 
 Le schéma Prisma contient déjà `users` et `registrations` : les places restantes se calculent à partir des inscriptions.
