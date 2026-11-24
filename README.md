@@ -8,16 +8,16 @@ Plateforme de gestion d'événements : un visiteur consulte le catalogue, un par
 | Back            | NestJS 12 + Prisma 7, API REST sous `/api/v1`                                        |
 | Base de données | PostgreSQL 17                                                                        |
 | Contrat         | `contract/openapi.json`, généré par l'API ; types et mocks MSW du Front en découlent |
-| Autres services | Mailpit (e-mails en dev), volume Docker pour les images (à partir du Sprint 3)       |
+| Autres services | Mailpit (e-mails en dev), dossier `UPLOADS_DIR` pour les images (volume Docker)      |
 
 ```text
 EventHub-YNOV/
 ├── apps/
-│   ├── api/          NestJS + Prisma (modules auth, events, categories ; registrations à venir)
-│   └── web/          SPA React (Liste, Détail, Inscription, Connexion, Mes inscriptions ; mocks MSW dans src/mocks)
+│   ├── api/          NestJS + Prisma (modules auth, events, categories, registrations ; images dans uploads/)
+│   └── web/          SPA React (Liste, Détail, Inscription, Connexion, Mes inscriptions, Créer un événement ; mocks MSW)
 ├── contract/
 │   └── openapi.json  contrat généré par l'API, source des types du Front
-├── docker-compose.yml  PostgreSQL + Mailpit
+├── docker-compose.yml  PostgreSQL + Mailpit, volume event-images
 └── .github/workflows/ci.yml
 ```
 
@@ -91,6 +91,8 @@ Toutes les erreurs suivent `ApiErrorDto` :
 | GET     | `/api/v1/events`                    | US01, US02 | Catalogue paginé (`page`, `pageSize` ≤ 50), filtres combinables `from`, `to`, `category`, `city`                                      |
 | GET     | `/api/v1/events/{id}`               | US03       | Détail : description, organisateur, places restantes ; 404 si inconnu                                                                 |
 | GET     | `/api/v1/categories`                | US02       | Catégories pour le filtre                                                                                                             |
+| POST    | `/api/v1/events`                    | US08       | Création d'un événement par un organisateur (JSON) ; 201 avec le détail, 400 avec `details`, 401, 403 pour un participant             |
+| POST    | `/api/v1/events/{id}/image`         | US08       | Image de l'événement (multipart, champ `image`, JPG ou PNG, 2 Mo maximum) ; 200, 400, 401, 403 (pas l'organisateur), 404              |
 | POST    | `/api/v1/auth/sign-up`              | US04       | Création d'un compte participant ; 400 avec `details`, 409 si l'email est pris                                                        |
 | POST    | `/api/v1/auth/sign-in`              | US04       | Connexion : pose le cookie de session ; 401 générique si les identifiants sont faux                                                   |
 | POST    | `/api/v1/auth/sign-out`             | US04       | Déconnexion : supprime la session en base et efface le cookie ; 204                                                                   |
@@ -100,6 +102,17 @@ Toutes les erreurs suivent `ApiErrorDto` :
 | DELETE  | `/api/v1/registrations/{id}`        | US06       | Annulation d'une inscription, la place est libérée ; 204, 401, 403 (pas la mienne), 404, 409 (événement passé)                        |
 
 Le catalogue n'affiche jamais d'événement passé : sans `from`, il part de maintenant, et un `from` dans le passé est ramené à maintenant. Une date seule dans `to` inclut toute la journée. Côté Front, le champ « Du » n'accepte pas de date passée, et une page au-delà de la dernière (`?page=99`) est remplacée par la dernière page existante.
+
+### Création d'un événement (US08)
+
+- `POST /events` est réservé au rôle `ORGANIZER`. L'organisateur est l'utilisateur connecté : un `organizerId` dans le corps est refusé (400). La validation est dans `CreateEventDto` : titre de 3 à 120 caractères, description obligatoire (5 000 caractères maximum), catégorie existante, début dans le futur, fin facultative postérieure au début, lieu et ville obligatoires, capacité entière d'au moins 1, prix en centimes positif ou nul.
+- Le prix est saisi en euros dans le formulaire et envoyé en centimes (`priceCents`).
+- L'image s'envoie après la création, sur `POST /events/{id}/image`. Le contrat reste en JSON pour la création. Si l'envoi de l'image échoue, l'événement reste créé et la page détail le signale.
+- Seuls le JPG et le PNG sont acceptés, avec un contrôle des premiers octets du fichier, pas de l'extension. Au-delà de 2 Mo, la lecture s'arrête et l'API renvoie une 400. Le fichier est renommé `<uuid>.png` ou `<uuid>.jpg`, et l'ancienne image est supprimée en cas de remplacement.
+
+#### Dossier des images
+
+Les images sont écrites dans `UPLOADS_DIR` (par défaut `apps/api/uploads`, ignoré par Git ; un chemin relatif part de `apps/api`) et servies en statique sous `/uploads`, hors du préfixe `/api/v1`, avec `X-Content-Type-Options: nosniff`. En dev, Vite redirige aussi `/uploads` vers l'API. Le volume Docker nommé `event-images` de `docker-compose.yml` est prévu pour ce dossier quand l'API tournera en conteneur (par exemple `event-images:/app/uploads` avec `UPLOADS_DIR=/app/uploads`). Les tests e2e écrivent dans un dossier temporaire.
 
 ### Authentification
 
@@ -143,11 +156,11 @@ Les tests e2e créent la base `eventhub_test` si besoin et refusent de tourner s
 
 ## Avancement
 
-| Sprint | Stories              | État                            |
-| ------ | -------------------- | ------------------------------- |
-| 1      | US01, US02, US03     | Livré                           |
-| 2      | US04, US05           | Livré                           |
-| 3      | US06 à US09          | En cours : US06 et US07 livrées |
-| 4      | US10 à US13 (+ US14) | En cours : US11 livrée          |
+| Sprint | Stories              | État                                  |
+| ------ | -------------------- | ------------------------------------- |
+| 1      | US01, US02, US03     | Livré                                 |
+| 2      | US04, US05           | Livré                                 |
+| 3      | US06 à US09          | En cours : US06, US07 et US08 livrées |
+| 4      | US10 à US13 (+ US14) | En cours : US11 livrée                |
 
 Le schéma Prisma contient déjà `users` et `registrations` : les places restantes se calculent à partir des inscriptions.

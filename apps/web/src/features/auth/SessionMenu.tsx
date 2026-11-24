@@ -16,6 +16,9 @@ export function SessionMenu() {
   if (user) {
     return (
       <div className="session">
+        {user.role === 'ORGANIZER' && (
+          <Link to="/organisateur/evenements/nouveau">Créer un événement</Link>
+        )}
         <Link to="/mes-inscriptions">Mes inscriptions</Link>
         <span className="session__greeting">Bonjour {user.firstName}</span>
         <button

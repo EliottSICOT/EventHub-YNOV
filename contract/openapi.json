@@ -340,6 +340,168 @@
         "tags": [
           "events"
         ]
+      },
+      "post": {
+        "description": "US08 : réservé aux organisateurs. L'organisateur est l'utilisateur connecté. L'événement apparaît aussitôt dans le catalogue public. L'image, facultative, s'envoie ensuite sur `POST /events/{id}/image`.",
+        "operationId": "createEvent",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateEventDto"
+              },
+              "examples": {
+                "concert": {
+                  "value": {
+                    "title": "Nuit du jazz",
+                    "description": "Trois quartets lyonnais se succèdent sur la scène du Transbordeur.",
+                    "categoryId": "5d1f0c52-6a3e-4b8e-9a43-0d7f1e2b9c22",
+                    "startsAt": "2026-12-05T18:00:00.000Z",
+                    "endsAt": "2026-12-05T21:00:00.000Z",
+                    "venue": "Le Transbordeur",
+                    "address": "3 boulevard de Stalingrad",
+                    "city": "Lyon",
+                    "capacity": 300,
+                    "priceCents": 1500
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Événement créé",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventDetailDto"
+                },
+                "example": {
+                  "id": "3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11",
+                  "title": "Nuit du jazz",
+                  "description": "Trois quartets lyonnais se succèdent sur la scène du Transbordeur.",
+                  "startsAt": "2026-12-05T18:00:00.000Z",
+                  "endsAt": "2026-12-05T21:00:00.000Z",
+                  "venue": "Le Transbordeur",
+                  "address": "3 boulevard de Stalingrad",
+                  "city": "Lyon",
+                  "capacity": 300,
+                  "priceCents": 1500,
+                  "remainingSeats": 300,
+                  "isFull": false,
+                  "imageUrl": null,
+                  "category": {
+                    "id": "5d1f0c52-6a3e-4b8e-9a43-0d7f1e2b9c22",
+                    "name": "Concert",
+                    "slug": "concert"
+                  },
+                  "organizer": {
+                    "id": "0d6a1b52-1b0e-4b8e-9a43-0d7f1e2b9c02",
+                    "name": "Camille Martin"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Champs invalides (détail par champ), ou catégorie inconnue",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "examples": {
+                  "validation": {
+                    "summary": "Champs invalides",
+                    "value": {
+                      "statusCode": 400,
+                      "error": "Bad Request",
+                      "message": "La requête contient des champs invalides",
+                      "details": [
+                        {
+                          "field": "startsAt",
+                          "message": "La date de début doit être dans le futur"
+                        },
+                        {
+                          "field": "capacity",
+                          "message": "La capacité doit être d'au moins 1 place"
+                        },
+                        {
+                          "field": "priceCents",
+                          "message": "Le prix doit être positif ou nul"
+                        }
+                      ],
+                      "path": "/api/v1/events",
+                      "timestamp": "2026-11-20T10:33:21.774Z"
+                    }
+                  },
+                  "unknownCategory": {
+                    "summary": "Catégorie inconnue",
+                    "value": {
+                      "statusCode": 400,
+                      "error": "Bad Request",
+                      "message": "La requête contient des champs invalides",
+                      "details": [
+                        {
+                          "field": "categoryId",
+                          "message": "La catégorie choisie n'existe pas"
+                        }
+                      ],
+                      "path": "/api/v1/events",
+                      "timestamp": "2026-11-20T10:33:21.774Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Pas de session, ou session expirée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "statusCode": 401,
+                  "error": "Unauthorized",
+                  "message": "Authentification requise",
+                  "path": "/api/v1/events",
+                  "timestamp": "2026-11-20T10:33:21.774Z"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "L'utilisateur connecté n'est pas organisateur",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "statusCode": 403,
+                  "error": "Forbidden",
+                  "message": "Vous n'avez pas les droits nécessaires pour cette action",
+                  "path": "/api/v1/events",
+                  "timestamp": "2026-11-20T10:33:21.774Z"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Créer un événement",
+        "tags": [
+          "events"
+        ]
       }
     },
     "/api/v1/events/{id}": {
@@ -380,6 +542,183 @@
           }
         },
         "summary": "Détail d'un événement",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/api/v1/events/{id}/image": {
+      "post": {
+        "description": "US08 : réservé à l'organisateur de l'événement. Formats JPG et PNG uniquement (type vérifié sur le contenu du fichier, pas sur son extension), 2 Mo maximum. Le fichier est renommé avec un identifiant aléatoire et servi sous `/uploads`.",
+        "operationId": "setEventImage",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Identifiant de l'événement",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "image"
+                ],
+                "properties": {
+                  "image": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Fichier JPG ou PNG"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Image enregistrée ; renvoie l'événement avec son `imageUrl`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventDetailDto"
+                },
+                "example": {
+                  "id": "3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11",
+                  "title": "Nuit du jazz",
+                  "description": "Trois quartets lyonnais se succèdent sur la scène du Transbordeur.",
+                  "startsAt": "2026-12-05T18:00:00.000Z",
+                  "endsAt": "2026-12-05T21:00:00.000Z",
+                  "venue": "Le Transbordeur",
+                  "address": "3 boulevard de Stalingrad",
+                  "city": "Lyon",
+                  "capacity": 300,
+                  "priceCents": 1500,
+                  "remainingSeats": 300,
+                  "isFull": false,
+                  "imageUrl": "/uploads/7c9e6679-7425-40de-944b-e07fc1f90ae7.png",
+                  "category": {
+                    "id": "5d1f0c52-6a3e-4b8e-9a43-0d7f1e2b9c22",
+                    "name": "Concert",
+                    "slug": "concert"
+                  },
+                  "organizer": {
+                    "id": "0d6a1b52-1b0e-4b8e-9a43-0d7f1e2b9c02",
+                    "name": "Camille Martin"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Fichier absent, format autre que JPG ou PNG, ou plus de 2 Mo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "examples": {
+                  "format": {
+                    "summary": "Format refusé",
+                    "value": {
+                      "statusCode": 400,
+                      "error": "Bad Request",
+                      "message": "La requête contient des champs invalides",
+                      "details": [
+                        {
+                          "field": "image",
+                          "message": "L'image doit être au format JPG ou PNG"
+                        }
+                      ],
+                      "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11/image",
+                      "timestamp": "2026-11-20T10:33:21.774Z"
+                    }
+                  },
+                  "tooLarge": {
+                    "summary": "Fichier trop gros",
+                    "value": {
+                      "statusCode": 400,
+                      "error": "Bad Request",
+                      "message": "La requête contient des champs invalides",
+                      "details": [
+                        {
+                          "field": "image",
+                          "message": "L'image ne doit pas dépasser 2 Mo"
+                        }
+                      ],
+                      "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11/image",
+                      "timestamp": "2026-11-20T10:33:21.774Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Pas de session, ou session expirée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "statusCode": 401,
+                  "error": "Unauthorized",
+                  "message": "Authentification requise",
+                  "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11/image",
+                  "timestamp": "2026-11-20T10:33:21.774Z"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "L'utilisateur connecté n'est pas l'organisateur de l'événement",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "statusCode": 403,
+                  "error": "Forbidden",
+                  "message": "Seul l'organisateur de l'événement peut modifier son image",
+                  "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11/image",
+                  "timestamp": "2026-11-20T10:33:21.774Z"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Événement inconnu",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "statusCode": 404,
+                  "error": "Not Found",
+                  "message": "L'événement demandé n'existe pas",
+                  "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11/image",
+                  "timestamp": "2026-11-20T10:33:21.774Z"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Ajouter ou remplacer l'image d'un événement",
         "tags": [
           "events"
         ]
@@ -1102,6 +1441,77 @@
           "description",
           "address",
           "organizer"
+        ]
+      },
+      "CreateEventDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "example": "Nuit du jazz",
+            "minLength": 3,
+            "maxLength": 120
+          },
+          "description": {
+            "type": "string",
+            "example": "Trois quartets lyonnais se succèdent sur la scène du Transbordeur.",
+            "maxLength": 5000
+          },
+          "categoryId": {
+            "type": "string",
+            "description": "Identifiant d’une catégorie existante (`GET /categories`)",
+            "example": "5d1f0c52-6a3e-4b8e-9a43-0d7f1e2b9c22"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Début de l’événement, dans le futur (date-heure ISO 8601).",
+            "example": "2026-12-05T18:00:00.000Z"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fin de l’événement, facultative, postérieure au début.",
+            "example": "2026-12-05T21:00:00.000Z"
+          },
+          "venue": {
+            "type": "string",
+            "example": "Le Transbordeur",
+            "maxLength": 120
+          },
+          "address": {
+            "type": "string",
+            "example": "3 boulevard de Stalingrad",
+            "maxLength": 200
+          },
+          "city": {
+            "type": "string",
+            "example": "Lyon",
+            "maxLength": 100
+          },
+          "capacity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000,
+            "example": 300
+          },
+          "priceCents": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000000,
+            "description": "Prix en centimes d'euro, 0 pour un événement gratuit",
+            "example": 1500
+          }
+        },
+        "required": [
+          "title",
+          "description",
+          "categoryId",
+          "startsAt",
+          "venue",
+          "city",
+          "capacity",
+          "priceCents"
         ]
       },
       "RegistrationDto": {

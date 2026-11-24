@@ -1,7 +1,8 @@
 import { createOpenApiHttp } from 'openapi-msw';
 import type { paths } from '../api/schema';
-import type { EventDetail, EventSummary, FieldError } from '../api/types';
+import type { Category, EventDetail, EventSummary, FieldError, User } from '../api/types';
 import { mockAuth } from './auth';
+import { mockEvents } from './events';
 import { categories as defaultCategories, events as defaultEvents } from './fixtures';
 import { mockRegistrations } from './registrations';
 
@@ -33,6 +34,9 @@ function errorBody(statusCode: number, error: string, message: string, path: str
  * (filtres, pagination, 404) pour que le Front puisse avancer sans le Back.
  */
 export function createHandlers(events = defaultEvents, categories = defaultCategories) {
+  // Fixtures, plus les événements créés pendant la session (US08).
+  const allEvents = () => [...events, ...mockEvents.all()];
+
   return [
     http.get('/api/v1/events', ({ query, request, response }) => {
       const page = Number(query.get('page') ?? 1);
@@ -59,7 +63,7 @@ export function createHandlers(events = defaultEvents, categories = defaultCateg
         });
       }
 
-      const matching = events
+      const matching = allEvents()
         .filter((e) => {
           const start = new Date(e.startsAt).getTime();
           return (
@@ -85,7 +89,7 @@ export function createHandlers(events = defaultEvents, categories = defaultCateg
     }),
 
     http.get('/api/v1/events/{id}', ({ params, request, response }) => {
-      const event = events.find((e) => e.id === params.id);
+      const event = allEvents().find((e) => e.id === params.id);
       if (!event) {
         return response(404).json(
           errorBody(
@@ -105,7 +109,7 @@ export function createHandlers(events = defaultEvents, categories = defaultCateg
       if (!user) {
         return response(401).json(errorBody(401, 'Unauthorized', 'Authentification requise', path));
       }
-      const event = events.find((e) => e.id === params.id);
+      const event = allEvents().find((e) => e.id === params.id);
       if (!event) {
         return response(404).json(
           errorBody(404, 'Not Found', "L'événement demandé n'existe pas", path),
@@ -144,7 +148,7 @@ export function createHandlers(events = defaultEvents, categories = defaultCateg
       const mine = mockRegistrations
         .forUser(user.id)
         .flatMap((registration) => {
-          const event = events.find((e) => e.id === registration.eventId);
+          const event = allEvents().find((e) => e.id === registration.eventId);
           return event
             ? [{ id: registration.id, createdAt: registration.createdAt, event: toSummary(event) }]
             : [];
@@ -177,7 +181,7 @@ export function createHandlers(events = defaultEvents, categories = defaultCateg
           ),
         );
       }
-      const event = events.find((e) => e.id === registration.eventId);
+      const event = allEvents().find((e) => e.id === registration.eventId);
       if (event && new Date(event.startsAt).getTime() <= Date.now()) {
         return response(409).json(
           errorBody(
@@ -194,11 +198,187 @@ export function createHandlers(events = defaultEvents, categories = defaultCateg
 
     http.get('/api/v1/categories', ({ response }) => response(200).json(categories)),
 
+    // US08 : création réservée aux organisateurs, mêmes règles et mêmes messages que l'API.
+    http.post('/api/v1/events', async ({ request, response }) => {
+      const path = new URL(request.url).pathname;
+      const user = mockAuth.currentUser;
+      if (!user) {
+        return response(401).json(errorBody(401, 'Unauthorized', 'Authentification requise', path));
+      }
+      if (user.role !== 'ORGANIZER') {
+        return response(403).json(
+          errorBody(
+            403,
+            'Forbidden',
+            "Vous n'avez pas les droits nécessaires pour cette action",
+            path,
+          ),
+        );
+      }
+      const body = (await request.json()) as Record<string, unknown>;
+      const details = validateCreateEvent(body);
+      if (details.length > 0) return response(400).json(validationError(path, details));
+
+      const category = categories.find((c) => c.id === body.categoryId);
+      if (!category) {
+        return response(400).json(
+          validationError(path, [
+            { field: 'categoryId', message: "La catégorie choisie n'existe pas" },
+          ]),
+        );
+      }
+      const event = buildCreatedEvent(body, category, user);
+      mockEvents.add(event);
+      return response(201).json(event);
+    }),
+
+    // US08 : image réservée à l'organisateur de l'événement, JPG ou PNG, 2 Mo maximum.
+    http.post('/api/v1/events/{id}/image', async ({ params, request, response }) => {
+      const path = new URL(request.url).pathname;
+      const user = mockAuth.currentUser;
+      if (!user) {
+        return response(401).json(errorBody(401, 'Unauthorized', 'Authentification requise', path));
+      }
+      const event = allEvents().find((e) => e.id === params.id);
+      if (!event) {
+        return response(404).json(
+          errorBody(404, 'Not Found', "L'événement demandé n'existe pas", path),
+        );
+      }
+      if (event.organizer.id !== user.id) {
+        return response(403).json(
+          errorBody(
+            403,
+            'Forbidden',
+            "Seul l'organisateur de l'événement peut modifier son image",
+            path,
+          ),
+        );
+      }
+      const image = (await request.formData()).get('image');
+      const message = imageError(image);
+      if (message || !isFile(image)) {
+        return response(400).json(
+          validationError(path, [{ field: 'image', message: message ?? '' }]),
+        );
+      }
+      // En dev:mock, l'image choisie s'affiche vraiment ; sinon, une URL comme celles de l'API.
+      const imageUrl =
+        typeof URL.createObjectURL === 'function'
+          ? URL.createObjectURL(image)
+          : `/uploads/${crypto.randomUUID()}.${image.type === 'image/png' ? 'png' : 'jpg'}`;
+      const updated = mockEvents.update(event.id, { imageUrl }) ?? { ...event, imageUrl };
+      return response(200).json(withRegistrations(updated));
+    }),
+
     ...authHandlers,
   ];
 }
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const IMAGE_TYPES = ['image/jpeg', 'image/png'];
+const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+const CREATE_EVENT_FIELDS = new Set([
+  'title',
+  'description',
+  'categoryId',
+  'startsAt',
+  'endsAt',
+  'venue',
+  'address',
+  'city',
+  'capacity',
+  'priceCents',
+]);
+
+/**
+ * Champ fichier d'un multipart. Pas de `instanceof File` : dans les tests (jsdom), le fichier
+ * décodé par le `fetch` de Node n'est pas une instance du `File` global de jsdom.
+ */
+function isFile(value: FormDataEntryValue | null): value is File {
+  return value !== null && typeof value !== 'string';
+}
+
+/** Contrôle de l'image comme l'API (le mock se fie au type annoncé, l'API lit le contenu). */
+function imageError(image: FormDataEntryValue | null): string | undefined {
+  if (!isFile(image) || image.size === 0) return "L'image est obligatoire";
+  if (!IMAGE_TYPES.includes(image.type)) return "L'image doit être au format JPG ou PNG";
+  if (image.size > MAX_IMAGE_BYTES) return "L'image ne doit pas dépasser 2 Mo";
+  return undefined;
+}
+
+/** Règles de `CreateEventDto` côté API (US08), avec les mêmes messages. */
+function validateCreateEvent(body: Record<string, unknown>): FieldError[] {
+  const details: FieldError[] = [];
+  const add = (field: string, message: string) => details.push({ field, message });
+  const text = (field: string) => asString(body[field]).trim();
+
+  for (const field of Object.keys(body)) {
+    if (!CREATE_EVENT_FIELDS.has(field)) add(field, `property ${field} should not exist`);
+  }
+  const title = text('title');
+  if (!title) add('title', 'Le titre est obligatoire');
+  else if (title.length < 3) add('title', 'Le titre doit contenir au moins 3 caractères');
+  else if (title.length > 120) add('title', 'Le titre ne doit pas dépasser 120 caractères');
+  const description = text('description');
+  if (!description) add('description', 'La description est obligatoire');
+  else if (description.length > 5000)
+    add('description', 'La description ne doit pas dépasser 5000 caractères');
+  if (!text('categoryId')) add('categoryId', 'La catégorie est obligatoire');
+
+  const startsAt = Date.parse(asString(body.startsAt));
+  if (!body.startsAt) add('startsAt', 'La date de début est obligatoire');
+  else if (Number.isNaN(startsAt))
+    add('startsAt', 'La date de début doit être une date-heure ISO 8601 valide');
+  else if (startsAt <= Date.now()) add('startsAt', 'La date de début doit être dans le futur');
+  if (body.endsAt !== undefined) {
+    const endsAt = Date.parse(asString(body.endsAt));
+    if (Number.isNaN(endsAt))
+      add('endsAt', 'La date de fin doit être une date-heure ISO 8601 valide');
+    else if (!Number.isNaN(startsAt) && endsAt <= startsAt)
+      add('endsAt', 'La date de fin doit être postérieure à la date de début');
+  }
+
+  if (!text('venue')) add('venue', 'Le lieu est obligatoire');
+  if (!text('city')) add('city', 'La ville est obligatoire');
+
+  const { capacity, priceCents } = body;
+  if (typeof capacity !== 'number' || !Number.isInteger(capacity))
+    add('capacity', 'La capacité doit être un nombre entier');
+  else if (capacity < 1) add('capacity', "La capacité doit être d'au moins 1 place");
+  else if (capacity > 100_000) add('capacity', 'La capacité ne doit pas dépasser 100 000 places');
+  if (typeof priceCents !== 'number' || !Number.isInteger(priceCents))
+    add('priceCents', 'Le prix doit être un nombre entier de centimes');
+  else if (priceCents < 0) add('priceCents', 'Le prix doit être positif ou nul');
+  else if (priceCents > 1_000_000) add('priceCents', 'Le prix ne doit pas dépasser 10 000 €');
+  return details;
+}
+
+function buildCreatedEvent(
+  body: Record<string, unknown>,
+  category: Category,
+  user: User,
+): EventDetail {
+  const capacity = body.capacity as number;
+  return {
+    id: crypto.randomUUID(),
+    title: asString(body.title).trim(),
+    description: asString(body.description).trim(),
+    startsAt: new Date(asString(body.startsAt)).toISOString(),
+    endsAt: body.endsAt ? new Date(asString(body.endsAt)).toISOString() : null,
+    venue: asString(body.venue).trim(),
+    address: asString(body.address).trim() || null,
+    city: asString(body.city).trim(),
+    capacity,
+    priceCents: body.priceCents as number,
+    remainingSeats: capacity,
+    isFull: false,
+    imageUrl: null,
+    category,
+    organizer: { id: user.id, name: `${user.firstName} ${user.lastName}` },
+  };
+}
 
 function validationError(path: string, details: FieldError[]) {
   return {
