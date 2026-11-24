@@ -14,7 +14,7 @@ Plateforme de gestion d'événements : un visiteur consulte le catalogue, un par
 EventHub-YNOV/
 ├── apps/
 │   ├── api/          NestJS + Prisma (modules auth, events, categories ; registrations à venir)
-│   └── web/          SPA React (Liste, Détail, Inscription, Connexion ; mocks MSW dans src/mocks)
+│   └── web/          SPA React (Liste, Détail, Inscription, Connexion, Mes inscriptions ; mocks MSW dans src/mocks)
 ├── contract/
 │   └── openapi.json  contrat généré par l'API, source des types du Front
 ├── docker-compose.yml  PostgreSQL + Mailpit
@@ -139,7 +139,7 @@ Les tests e2e créent la base `eventhub_test` si besoin et refusent de tourner s
 | ------ | -------------------- | --------------------------------------- |
 | 1      | US01, US02, US03     | Livré                                   |
 | 2      | US04, US05           | Livré                                   |
-| 3      | US06 à US09          | À venir                                 |
+| 3      | US06 à US09          | En cours : US06 Front livré             |
 | 4      | US10 à US13 (+ US14) | À venir                                 |
 
 Le schéma Prisma contient déjà `users` et `registrations` : les places restantes se calculent à partir des inscriptions.
