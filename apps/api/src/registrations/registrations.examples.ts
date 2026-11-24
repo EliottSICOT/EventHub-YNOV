@@ -1,17 +1,18 @@
 import { AUTH_MESSAGES } from '../auth/auth.constants.js';
 import type { ApiErrorDto } from '../common/errors/api-error.dto.js';
 import { EVENT_NOT_FOUND_MESSAGE } from '../events/events.service.js';
+import type { MyRegistrationsDto } from './dto/my-registrations.dto.js';
 import type { RegistrationDto } from './dto/registration.dto.js';
 import { REGISTRATION_MESSAGES } from './registrations.constants.js';
 
-/** Exemples du contrat OpenAPI pour `POST /events/{id}/registrations`. */
+/** Exemples du contrat OpenAPI pour les inscriptions. */
 
 const EVENT_ID = '3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11';
 const PATH = `/api/v1/events/${EVENT_ID}/registrations`;
 const TIMESTAMP = '2026-11-20T10:33:21.774Z';
 
-function error(statusCode: number, label: string, message: string): ApiErrorDto {
-  return { statusCode, error: label, message, path: PATH, timestamp: TIMESTAMP };
+function error(statusCode: number, label: string, message: string, path = PATH): ApiErrorDto {
+  return { statusCode, error: label, message, path, timestamp: TIMESTAMP };
 }
 
 export const registrationExample: RegistrationDto = {
@@ -28,4 +29,35 @@ export const alreadyRegisteredExample = error(
   409,
   'Conflict',
   REGISTRATION_MESSAGES.alreadyRegistered,
+);
+
+export const myRegistrationsExample: MyRegistrationsDto = {
+  upcoming: [
+    {
+      id: registrationExample.id,
+      createdAt: TIMESTAMP,
+      event: {
+        id: EVENT_ID,
+        title: 'Nuit du jazz',
+        startsAt: '2026-12-05T19:00:00.000Z',
+        endsAt: '2026-12-05T22:00:00.000Z',
+        venue: 'Le Transbordeur',
+        city: 'Lyon',
+        capacity: 300,
+        priceCents: 1500,
+        remainingSeats: 41,
+        isFull: false,
+        imageUrl: null,
+        category: { id: '5c2f8a10-7d3b-4e6f-8a91-2b3c4d5e6f70', name: 'Concert', slug: 'concert' },
+      },
+    },
+  ],
+  past: [],
+};
+
+export const myRegistrationsUnauthenticatedExample = error(
+  401,
+  'Unauthorized',
+  AUTH_MESSAGES.unauthenticated,
+  '/api/v1/me/registrations',
 );
