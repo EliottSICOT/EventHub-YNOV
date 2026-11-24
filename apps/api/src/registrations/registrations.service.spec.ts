@@ -3,6 +3,7 @@ import { Test } from '@nestjs/testing';
 import { vi } from 'vitest';
 import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { RegistrationMailer } from './registration-mailer.service.js';
 import { REGISTRATION_MESSAGES } from './registrations.constants.js';
 import { RegistrationsService } from './registrations.service.js';
 
@@ -11,12 +12,17 @@ describe('RegistrationsService', () => {
     $transaction: vi.fn(),
     registration: { findUnique: vi.fn(), deleteMany: vi.fn() },
   };
+  const mailerMock = { sendConfirmation: vi.fn() };
   let service: RegistrationsService;
 
   beforeEach(async () => {
     vi.clearAllMocks();
     const moduleRef = await Test.createTestingModule({
-      providers: [RegistrationsService, { provide: PrismaService, useValue: prismaMock }],
+      providers: [
+        RegistrationsService,
+        { provide: PrismaService, useValue: prismaMock },
+        { provide: RegistrationMailer, useValue: mailerMock },
+      ],
     }).compile();
     service = moduleRef.get(RegistrationsService);
   });
@@ -40,6 +46,7 @@ describe('RegistrationsService', () => {
     const failure = new Error('connexion perdue');
     prismaMock.$transaction.mockRejectedValue(failure);
     await expect(service.register('event-1', 'user-1')).rejects.toBe(failure);
+    expect(mailerMock.sendConfirmation).not.toHaveBeenCalled();
   });
   describe('cancel', () => {
     const now = new Date('2026-12-01T10:00:00Z');

@@ -10,11 +10,15 @@ import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { RegistrationDto } from './dto/registration.dto.js';
 import type { UserRegistrationDto } from './dto/user-registration.dto.js';
+import { RegistrationMailer } from './registration-mailer.service.js';
 import { REGISTRATION_MESSAGES } from './registrations.constants.js';
 
 @Injectable()
 export class RegistrationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mailer: RegistrationMailer,
+  ) {}
 
   /**
    * Inscrit `userId` à l'événement `eventId` (US05).
@@ -24,6 +28,9 @@ export class RegistrationsService {
    * l'une après l'autre, chacune comptant les places après les précédentes. La capacité
    * ne peut donc pas être dépassée. La contrainte unique `(event_id, user_id)` reste le
    * dernier filet contre un doublon.
+   *
+   * L'e-mail de confirmation (US11) part une fois la transaction validée, sans retarder la
+   * réponse : `sendConfirmation` journalise ses échecs et ne lève jamais d'erreur.
    */
   async register(
     eventId: string,
@@ -31,7 +38,7 @@ export class RegistrationsService {
     now: Date = new Date(),
   ): Promise<RegistrationDto> {
     try {
-      return await this.prisma.$transaction(async (tx) => {
+      const confirmed = await this.prisma.$transaction(async (tx) => {
         const locked = await tx.$queryRaw<{ capacity: number; starts_at: Date }[]>`
           SELECT capacity, starts_at FROM events WHERE id = ${eventId} FOR UPDATE`;
         if (locked.length === 0) {
@@ -64,6 +71,8 @@ export class RegistrationsService {
           isFull: remaining === 0,
         };
       });
+      void this.mailer.sendConfirmation(confirmed.id);
+      return confirmed;
     } catch (error) {
       // Filet de sécurité : la contrainte unique a été violée malgré la vérification.
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
