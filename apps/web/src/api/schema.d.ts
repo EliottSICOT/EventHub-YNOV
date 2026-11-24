@@ -141,6 +141,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/events/{id}/registrations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * S'inscrire à un événement
+         * @description US05 : inscrit l'utilisateur connecté, dans une transaction qui verrouille l'événement : deux inscriptions simultanées ne peuvent pas dépasser la capacité. Une inscription est refusée (409) si l'utilisateur est déjà inscrit, si l'événement est complet ou s'il est passé.
+         */
+        post: operations["registerToEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -325,6 +345,21 @@ export interface components {
             /** @example 3 boulevard de Stalingrad */
             address: string | null;
             organizer: components["schemas"]["OrganizerDto"];
+        };
+        RegistrationDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            eventId: string;
+            /** Format: date-time */
+            createdAt: string;
+            /**
+             * @description Places restantes de l'événement, inscription comprise
+             * @example 12
+             */
+            remainingSeats: number;
+            /** @description Vrai quand il ne reste plus aucune place */
+            isFull: boolean;
         };
     };
     responses: never;
@@ -640,6 +675,92 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CategoryDto"][];
+                };
+            };
+        };
+    };
+    registerToEvent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identifiant de l'événement */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Inscription enregistrée ; renvoie les places restantes à jour */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "9b1d2c3e-4f5a-4b6c-8d7e-0a1b2c3d4e5f",
+                     *       "eventId": "3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11",
+                     *       "createdAt": "2026-11-20T10:33:21.774Z",
+                     *       "remainingSeats": 41,
+                     *       "isFull": false
+                     *     }
+                     */
+                    "application/json": components["schemas"]["RegistrationDto"];
+                };
+            };
+            /** @description Pas de session, ou session expirée */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "statusCode": 401,
+                     *       "error": "Unauthorized",
+                     *       "message": "Authentification requise",
+                     *       "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11/registrations",
+                     *       "timestamp": "2026-11-20T10:33:21.774Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Événement inconnu */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "statusCode": 404,
+                     *       "error": "Not Found",
+                     *       "message": "L'événement demandé n'existe pas",
+                     *       "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11/registrations",
+                     *       "timestamp": "2026-11-20T10:33:21.774Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Déjà inscrit, événement complet ou événement passé */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "statusCode": 409,
+                     *       "error": "Conflict",
+                     *       "message": "Vous êtes déjà inscrit à cet événement",
+                     *       "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11/registrations",
+                     *       "timestamp": "2026-11-20T10:33:21.774Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
         };
