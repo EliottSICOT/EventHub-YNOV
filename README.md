@@ -86,15 +86,16 @@ Toutes les erreurs suivent `ApiErrorDto` :
 
 ## Endpoints
 
-| Méthode | Chemin                  | Story      | Description                                                                                      |
-| ------- | ----------------------- | ---------- | ------------------------------------------------------------------------------------------------ |
-| GET     | `/api/v1/events`        | US01, US02 | Catalogue paginé (`page`, `pageSize` ≤ 50), filtres combinables `from`, `to`, `category`, `city` |
-| GET     | `/api/v1/events/{id}`   | US03       | Détail : description, organisateur, places restantes ; 404 si inconnu                            |
-| GET     | `/api/v1/categories`    | US02       | Catégories pour le filtre                                                                        |
-| POST    | `/api/v1/auth/sign-up`  | US04       | Création d'un compte participant ; 400 avec `details`, 409 si l'email est pris                   |
-| POST    | `/api/v1/auth/sign-in`  | US04       | Connexion : pose le cookie de session ; 401 générique si les identifiants sont faux              |
-| POST    | `/api/v1/auth/sign-out` | US04       | Déconnexion : supprime la session en base et efface le cookie ; 204                              |
-| GET     | `/api/v1/auth/me`       | US04       | Utilisateur connecté (id, email, prénom, nom, rôle) ; 401 sans session                           |
+| Méthode | Chemin                              | Story      | Description                                                                                                                           |
+| ------- | ----------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| GET     | `/api/v1/events`                    | US01, US02 | Catalogue paginé (`page`, `pageSize` ≤ 50), filtres combinables `from`, `to`, `category`, `city`                                      |
+| GET     | `/api/v1/events/{id}`               | US03       | Détail : description, organisateur, places restantes ; 404 si inconnu                                                                 |
+| GET     | `/api/v1/categories`                | US02       | Catégories pour le filtre                                                                                                             |
+| POST    | `/api/v1/auth/sign-up`              | US04       | Création d'un compte participant ; 400 avec `details`, 409 si l'email est pris                                                        |
+| POST    | `/api/v1/auth/sign-in`              | US04       | Connexion : pose le cookie de session ; 401 générique si les identifiants sont faux                                                   |
+| POST    | `/api/v1/auth/sign-out`             | US04       | Déconnexion : supprime la session en base et efface le cookie ; 204                                                                   |
+| GET     | `/api/v1/auth/me`                   | US04       | Utilisateur connecté (id, email, prénom, nom, rôle) ; 401 sans session                                                                |
+| POST    | `/api/v1/events/{id}/registrations` | US05       | Inscription de l'utilisateur connecté, en transaction ; 201 avec les places restantes, 401, 404, 409 (déjà inscrit, complet ou passé) |
 
 Sans `from`, le catalogue n'affiche que les événements à venir. Une date seule dans `to` inclut toute la journée.
 
@@ -104,6 +105,11 @@ Sans `from`, le catalogue n'affiche que les événements à venir. Une date seul
 - Le Front appelle l'API avec `credentials: 'include'` ; hors proxy Vite, le CORS n'autorise que l'origine `FRONT_URL`.
 - Mots de passe hachés avec argon2id, 8 caractères minimum. L'email est normalisé (espaces retirés, minuscules).
 - Côté API, une route se protège avec `@UseGuards(AuthGuard)` et lit l'utilisateur avec `@CurrentUser()`. Pour la restreindre à un rôle : `@UseGuards(AuthGuard, RolesGuard) @Roles(Role.ORGANIZER)` (403 sinon).
+
+### Inscriptions
+
+- `POST /events/{id}/registrations` verrouille la ligne de l'événement (`SELECT … FOR UPDATE`) dans une transaction : les inscriptions simultanées au même événement passent l'une après l'autre, la capacité n'est jamais dépassée.
+- La contrainte unique `(event_id, user_id)` garantit une seule inscription par utilisateur ; les refus (déjà inscrit, complet, passé) renvoient 409 avec un message distinct.
 
 ## Scripts
 
@@ -129,11 +135,11 @@ Les tests e2e créent la base `eventhub_test` si besoin et refusent de tourner s
 
 ## Avancement
 
-| Sprint | Stories              | État                                 |
-| ------ | -------------------- | ------------------------------------ |
-| 1      | US01, US02, US03     | Livré                                |
-| 2      | US04, US05           | En cours : US04 livrée, US05 à venir |
-| 3      | US06 à US09          | À venir                              |
-| 4      | US10 à US13 (+ US14) | À venir                              |
+| Sprint | Stories              | État                                    |
+| ------ | -------------------- | --------------------------------------- |
+| 1      | US01, US02, US03     | Livré                                   |
+| 2      | US04, US05           | En cours : US04 livrée, US05 Back livré |
+| 3      | US06 à US09          | À venir                                 |
+| 4      | US10 à US13 (+ US14) | À venir                                 |
 
 Le schéma Prisma contient déjà `users` et `registrations` : les places restantes se calculent à partir des inscriptions.
