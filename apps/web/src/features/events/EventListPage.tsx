@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router';
 import { useCategories, useEvents } from '../../api/queries';
 import { Spinner } from '../../components/Spinner';
@@ -25,6 +25,20 @@ export function EventListPage() {
       setSearchParams((current) => updateSearchParams(current, changes)),
     [setSearchParams],
   );
+  // Page hors bornes (ancien lien, ?page=99…) : on remplace la page de l'URL par la dernière
+  // existante, sans ajouter d'entrée à l'historique.
+  const meta = events.data?.meta;
+  const lastPage =
+    meta && !events.isPlaceholderData && meta.total > 0 && meta.page > meta.totalPages
+      ? meta.totalPages
+      : undefined;
+  useEffect(() => {
+    if (lastPage === undefined) return;
+    setSearchParams((current) => updateSearchParams(current, { page: lastPage }), {
+      replace: true,
+    });
+  }, [lastPage, setSearchParams]);
+
   const changePage = (page: number) => {
     setSearchParams((current) => updateSearchParams(current, { page }));
     window.scrollTo?.({ top: 0 });
@@ -48,7 +62,7 @@ export function EventListPage() {
         onReset={() => setSearchParams(new URLSearchParams())}
       />
 
-      {events.isPending ? (
+      {events.isPending || lastPage !== undefined ? (
         <Spinner label="Chargement des événements…" />
       ) : events.isError ? (
         <StatusMessage variant="error" title="Impossible de charger les événements">
