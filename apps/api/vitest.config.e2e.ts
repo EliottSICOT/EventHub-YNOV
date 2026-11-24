@@ -7,7 +7,8 @@ export default defineConfig({
     globals: true,
     root: './',
     include: ['test/**/*.e2e-spec.ts'],
-    env: { DATABASE_URL: TEST_DATABASE_URL },
+    // SMTP_HOST vide : aucun e-mail ne part pendant les tests.
+    env: { DATABASE_URL: TEST_DATABASE_URL, SMTP_HOST: '' },
     globalSetup: ['./test/global-setup.ts'],
     fileParallelism: false,
   },
