@@ -1,6 +1,7 @@
 import { createOpenApiHttp } from 'openapi-msw';
 import type { paths } from '../api/schema';
-import type { EventDetail, EventSummary } from '../api/types';
+import type { EventDetail, EventSummary, FieldError } from '../api/types';
+import { mockAuth } from './auth';
 import { categories as defaultCategories, events as defaultEvents } from './fixtures';
 
 const http = createOpenApiHttp<paths>({ baseUrl: '*' });
@@ -86,7 +87,91 @@ export function createHandlers(events = defaultEvents, categories = defaultCateg
     }),
 
     http.get('/api/v1/categories', ({ response }) => response(200).json(categories)),
+
+    ...authHandlers,
   ];
 }
+
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function validationError(path: string, details: FieldError[]) {
+  return {
+    ...errorBody(400, 'Bad Request', 'La requête contient des champs invalides', path),
+    details,
+  };
+}
+
+const asString = (value: unknown) => (typeof value === 'string' ? value : '');
+
+/** Authentification (US04) : mêmes règles et mêmes messages que l'API, session dans `mockAuth`. */
+const authHandlers = [
+  http.post('/api/v1/auth/sign-up', async ({ request, response }) => {
+    const path = new URL(request.url).pathname;
+    const body = (await request.json()) as Record<string, unknown>;
+    const input = {
+      firstName: asString(body.firstName).trim(),
+      lastName: asString(body.lastName).trim(),
+      email: asString(body.email).trim().toLowerCase(),
+      password: asString(body.password),
+    };
+
+    const details: FieldError[] = [];
+    if (!input.firstName)
+      details.push({ field: 'firstName', message: 'Le prénom est obligatoire' });
+    if (!input.lastName) details.push({ field: 'lastName', message: 'Le nom est obligatoire' });
+    if (!EMAIL.test(input.email))
+      details.push({ field: 'email', message: "L'email n'est pas valide" });
+    if (input.password.length < 8) {
+      details.push({
+        field: 'password',
+        message: 'Le mot de passe doit contenir au moins 8 caractères',
+      });
+    }
+    if (details.length > 0) return response(400).json(validationError(path, details));
+
+    if (mockAuth.findByEmail(input.email)) {
+      return response(409).json(
+        errorBody(409, 'Conflict', 'Un compte existe déjà avec cet email', path),
+      );
+    }
+    return response(201).json(mockAuth.create(input));
+  }),
+
+  http.post('/api/v1/auth/sign-in', async ({ request, response }) => {
+    const path = new URL(request.url).pathname;
+    const body = (await request.json()) as Record<string, unknown>;
+    const email = asString(body.email).trim().toLowerCase();
+    const password = asString(body.password);
+
+    const details: FieldError[] = [];
+    if (!email) details.push({ field: 'email', message: "L'email est obligatoire" });
+    if (!password) details.push({ field: 'password', message: 'Le mot de passe est obligatoire' });
+    if (details.length > 0) return response(400).json(validationError(path, details));
+
+    const account = mockAuth.findByEmail(email);
+    if (!account || account.password !== password) {
+      return response(401).json(
+        errorBody(401, 'Unauthorized', 'Email ou mot de passe incorrect', path),
+      );
+    }
+    mockAuth.signIn(email);
+    return response(200).json(account.user);
+  }),
+
+  http.post('/api/v1/auth/sign-out', ({ response }) => {
+    mockAuth.signOut();
+    return response(204).empty();
+  }),
+
+  http.get('/api/v1/auth/me', ({ request, response }) => {
+    const user = mockAuth.currentUser;
+    if (!user) {
+      return response(401).json(
+        errorBody(401, 'Unauthorized', 'Authentification requise', new URL(request.url).pathname),
+      );
+    }
+    return response(200).json(user);
+  }),
+];
 
 export const handlers = createHandlers();
