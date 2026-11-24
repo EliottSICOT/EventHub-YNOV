@@ -33,7 +33,9 @@ export function createHandlers(events = defaultEvents, categories = defaultCateg
       const category = query.get('category');
       const city = query.get('city')?.toLowerCase();
 
-      const fromTime = from ? new Date(from).getTime() : Date.now();
+      // Comme l'API : un `from` passé est ramené à maintenant, jamais d'événement passé.
+      const now = Date.now();
+      const fromTime = Math.max(from ? new Date(from).getTime() : now, now);
       const toTime = to ? new Date(to).getTime() + (DATE_ONLY.test(to) ? DAY : 1) : Infinity;
 
       if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > 50) {
