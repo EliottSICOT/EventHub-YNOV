@@ -188,6 +188,83 @@ describe('Inscription à un événement (e2e)', () => {
     });
   });
 
+  describe('GET /api/v1/me/registrations', () => {
+    const mine = (cookie?: string) => {
+      const req = http().get('/api/v1/me/registrations');
+      return cookie ? req.set('Cookie', cookie) : req;
+    };
+    const titles = (registrations: { event: { title: string } }[]) =>
+      registrations.map((r) => r.event.title);
+
+    /** Inscription écrite en base : l'API refuse de s'inscrire à un événement passé. */
+    async function registerInPast(cookie: string, eventId: string) {
+      const me = await http().get('/api/v1/auth/me').set('Cookie', cookie).expect(200);
+      await prisma.registration.create({ data: { eventId, userId: me.body.id } });
+    }
+
+    async function createTitledEvent(title: string, startsAt: Date) {
+      const id = await createEvent(10, startsAt);
+      await prisma.event.update({ where: { id }, data: { title } });
+      return id;
+    }
+
+    it('renvoie 401 sans session', async () => {
+      const res = await mine().expect(401);
+      expect(res.body.message).toBe('Authentification requise');
+    });
+
+    it('renvoie deux listes vides sans inscription', async () => {
+      const res = await mine(await newParticipant()).expect(200);
+      expect(res.body).toEqual({ upcoming: [], past: [] });
+    });
+
+    it("renvoie l'inscription avec le titre, la date et le lieu de l'événement", async () => {
+      const startsAt = inDays(5);
+      const eventId = await createTitledEvent('Nuit du jazz', startsAt);
+      const cookie = await newParticipant();
+      const created = await register(eventId, cookie).expect(201);
+
+      const res = await mine(cookie).expect(200);
+      expect(res.body).toEqual({
+        upcoming: [
+          {
+            id: created.body.id,
+            createdAt: created.body.createdAt,
+            event: expect.objectContaining({
+              id: eventId,
+              title: 'Nuit du jazz',
+              startsAt: startsAt.toISOString(),
+              venue: 'Salle',
+              city: 'Lyon',
+              remainingSeats: 9,
+            }),
+          },
+        ],
+        past: [],
+      });
+    });
+
+    it('sépare et trie les inscriptions à venir et passées', async () => {
+      const cookie = await newParticipant();
+      await register(await createTitledEvent('Dans 20 jours', inDays(20)), cookie).expect(201);
+      await register(await createTitledEvent('Dans 2 jours', inDays(2)), cookie).expect(201);
+      await registerInPast(cookie, await createTitledEvent('Il y a 30 jours', inDays(-30)));
+      await registerInPast(cookie, await createTitledEvent('Hier', inDays(-1)));
+
+      const res = await mine(cookie).expect(200);
+      expect(titles(res.body.upcoming)).toEqual(['Dans 2 jours', 'Dans 20 jours']);
+      expect(titles(res.body.past)).toEqual(['Hier', 'Il y a 30 jours']);
+    });
+
+    it("ne montre jamais les inscriptions d'un autre utilisateur", async () => {
+      const eventId = await createEvent(5);
+      await register(eventId, await newParticipant()).expect(201);
+
+      const res = await mine(await newParticipant()).expect(200);
+      expect(res.body).toEqual({ upcoming: [], past: [] });
+    });
+  });
+
   describe('contrainte d’unicité en base', () => {
     it('refuse deux inscriptions (événement, utilisateur) identiques', async () => {
       const eventId = await createEvent(5);
