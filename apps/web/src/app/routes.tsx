@@ -23,7 +23,11 @@ export const routes: RouteObject[] = [
       { path: 'inscription', element: <SignUpPage /> },
       {
         element: <RequireAuth />,
-        children: [{ path: 'mes-inscriptions', element: <MyRegistrationsPage /> }],
+        children: [
+          { path: 'mes-inscriptions', element: <MyRegistrationsPage /> },
+          // Adresse citée par les critères d'US07.
+          { path: 'me/registrations', element: <Navigate to="/mes-inscriptions" replace /> },
+        ],
       },
       { path: '*', element: <NotFoundPage /> },
     ],

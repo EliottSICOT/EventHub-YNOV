@@ -92,14 +92,16 @@ a {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  flex-wrap: wrap;
+  gap: 8px 16px;
 }
 
 /* Zone de session : hauteur fixe pour que rien ne bouge pendant le chargement de /auth/me */
 .session {
   display: flex;
   align-items: center;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 4px 12px;
   min-height: 36px;
   font-weight: 600;
 }

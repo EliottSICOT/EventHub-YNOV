@@ -1,13 +1,15 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http as mswHttp, HttpResponse } from 'msw';
+import { delay, http as mswHttp, HttpResponse } from 'msw';
 import { api } from '../../api/client';
-import { demoUsers, mockAuth } from '../../mocks/auth';
+import { DEMO_PASSWORD, demoUsers, mockAuth } from '../../mocks/auth';
 import { events } from '../../mocks/fixtures';
 import { createHandlers } from '../../mocks/handlers';
 import { mockRegistrations } from '../../mocks/registrations';
 import { server } from '../../mocks/server';
 import { renderApp } from '../../test/render';
+import { meQueryKey } from '../auth/api';
+import { formatDateTime } from '../events/format';
 
 const [participant, organizer] = demoUsers;
 const upcoming = events[1];
@@ -196,6 +198,75 @@ describe("Annulation d'une inscription (US06, Front)", () => {
       'href',
       '/mes-inscriptions',
     );
+  });
+});
+
+describe('Mes inscriptions (US07, Front)', () => {
+  async function logIn(user: ReturnType<typeof userEvent.setup>, email: string) {
+    await user.type(await screen.findByLabelText('Email'), email);
+    await user.type(screen.getByLabelText('Mot de passe'), DEMO_PASSWORD);
+    await user.click(screen.getByRole('button', { name: 'Se connecter' }));
+  }
+
+  it('redirige un visiteur de /me/registrations vers la connexion, puis vers la page', async () => {
+    const user = userEvent.setup();
+    const { router } = renderApp('/me/registrations');
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/connexion'));
+    expect(router.state.location.search).toBe('?redirect=%2Fme%2Fregistrations');
+
+    await logIn(user, participant.email);
+    expect(await screen.findByRole('heading', { name: 'Mes inscriptions' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/mes-inscriptions');
+  });
+
+  it("affiche le titre, la date et le lieu, et ouvre le détail de l'événement au clic", async () => {
+    signIn();
+    mockRegistrations.add(upcoming.id, participant.id);
+    const user = userEvent.setup();
+    const { router } = renderApp('/mes-inscriptions');
+
+    const soon = await screen.findByRole('region', { name: 'À venir' });
+    expect(within(soon).getByText(formatDateTime(upcoming.startsAt))).toBeInTheDocument();
+    expect(
+      within(soon).getByText(`${upcoming.venue} · ${upcoming.city}`, { exact: false }),
+    ).toBeInTheDocument();
+
+    await user.click(within(soon).getByRole('link', { name: upcoming.title }));
+    expect(router.state.location.pathname).toBe(`/events/${upcoming.id}`);
+  });
+
+  it("n'affiche jamais les inscriptions du compte précédent", async () => {
+    signIn();
+    mockRegistrations.add(upcoming.id, participant.id);
+    const { queryClient } = renderApp('/mes-inscriptions');
+    await screen.findByRole('link', { name: upcoming.title });
+
+    // La réponse de l'API est retenue : seul le cache pourrait afficher quelque chose.
+    server.use(mswHttp.get('*/api/v1/registrations/me', () => delay('infinite')));
+    // Changement de compte, comme après une connexion (`useSignIn` alimente cette clé).
+    mockAuth.signIn(organizer.email);
+    act(() => queryClient.setQueryData(meQueryKey, organizer));
+
+    expect(await screen.findByText(`Bonjour ${organizer.firstName}`)).toBeInTheDocument();
+    expect(await screen.findByText('Chargement de vos inscriptions…')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: upcoming.title })).not.toBeInTheDocument();
+  });
+
+  it('renvoie vers la connexion quand la session a expiré', async () => {
+    signIn();
+    server.use(
+      mswHttp.get('*/api/v1/registrations/me', () =>
+        HttpResponse.json(
+          { statusCode: 401, error: 'Unauthorized', message: 'Authentification requise' },
+          { status: 401 },
+        ),
+      ),
+    );
+    const { router } = renderApp('/mes-inscriptions');
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/connexion'));
+    expect(router.state.location.search).toBe('?redirect=%2Fmes-inscriptions');
   });
 });
 

@@ -96,7 +96,7 @@ Toutes les erreurs suivent `ApiErrorDto` :
 | POST    | `/api/v1/auth/sign-out`             | US04       | Déconnexion : supprime la session en base et efface le cookie ; 204                                                                   |
 | GET     | `/api/v1/auth/me`                   | US04       | Utilisateur connecté (id, email, prénom, nom, rôle) ; 401 sans session                                                                |
 | POST    | `/api/v1/events/{id}/registrations` | US05       | Inscription de l'utilisateur connecté, en transaction ; 201 avec les places restantes, 401, 404, 409 (déjà inscrit, complet ou passé) |
-| GET     | `/api/v1/registrations/me`          | US06       | Mes inscriptions (passées comprises), triées par date d'événement ; 401 sans session                                                  |
+| GET     | `/api/v1/registrations/me`          | US06, US07 | Mes inscriptions (passées comprises), triées par date d'événement ; 401 sans session                                                  |
 | DELETE  | `/api/v1/registrations/{id}`        | US06       | Annulation d'une inscription, la place est libérée ; 204, 401, 403 (pas la mienne), 404, 409 (événement passé)                        |
 
 Sans `from`, le catalogue n'affiche que les événements à venir. Une date seule dans `to` inclut toute la journée.
@@ -138,11 +138,11 @@ Les tests e2e créent la base `eventhub_test` si besoin et refusent de tourner s
 
 ## Avancement
 
-| Sprint | Stories              | État                       |
-| ------ | -------------------- | -------------------------- |
-| 1      | US01, US02, US03     | Livré                      |
-| 2      | US04, US05           | Livré                      |
-| 3      | US06 à US09          | En cours : US06 Back livré |
-| 4      | US10 à US13 (+ US14) | À venir                    |
+| Sprint | Stories              | État                            |
+| ------ | -------------------- | ------------------------------- |
+| 1      | US01, US02, US03     | Livré                           |
+| 2      | US04, US05           | Livré                           |
+| 3      | US06 à US09          | En cours : US06 et US07 livrées |
+| 4      | US10 à US13 (+ US14) | À venir                         |
 
 Le schéma Prisma contient déjà `users` et `registrations` : les places restantes se calculent à partir des inscriptions.
