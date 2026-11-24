@@ -149,6 +149,6 @@ describe('Aucun événement passé, pagination cohérente (US01, #47)', () => {
 
     await waitFor(() => expect(router.state.location.search).toBe('?city=Paris'));
     expect(await screen.findByText('4 événements')).toBeInTheDocument();
-    expect(screen.getAllByRole('article')).toHaveLength(4);
+    expect(await screen.findAllByRole('article')).toHaveLength(4);
   });
 });
