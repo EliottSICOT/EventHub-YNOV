@@ -9,7 +9,7 @@ import { Layout } from './Layout';
 import { NotFoundPage } from './NotFoundPage';
 
 /**
- * Routes protégées : les placer sous un élément `RequireAuth`
+ * Routes protégées (à venir) : les placer sous un élément `RequireAuth`
  * (`features/auth/RequireAuth.tsx`), avec `role="ORGANIZER"` pour les écrans organisateur.
  */
 export const routes: RouteObject[] = [
@@ -23,7 +23,11 @@ export const routes: RouteObject[] = [
       { path: 'inscription', element: <SignUpPage /> },
       {
         element: <RequireAuth />,
-        children: [{ path: 'me/registrations', element: <MyRegistrationsPage /> }],
+        children: [
+          { path: 'mes-inscriptions', element: <MyRegistrationsPage /> },
+          // Adresse citée par les critères d'US07.
+          { path: 'me/registrations', element: <Navigate to="/mes-inscriptions" replace /> },
+        ],
       },
       { path: '*', element: <NotFoundPage /> },
     ],

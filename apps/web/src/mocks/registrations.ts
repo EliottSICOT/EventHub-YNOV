@@ -1,4 +1,4 @@
-interface MockRegistration {
+export interface MockRegistration {
   id: string;
   eventId: string;
   userId: string;
@@ -6,7 +6,7 @@ interface MockRegistration {
 }
 
 /**
- * Inscriptions simulées pour les mocks MSW (US05, US07) : couples « utilisateur, événement ».
+ * Inscriptions simulées pour les mocks MSW (US05, US06).
  * Les places restantes d'un événement = celles de la fixture moins les inscriptions faites ici.
  * En mémoire ; remis à zéro entre chaque test.
  */
@@ -25,7 +25,11 @@ class MockRegistrationStore {
     return this.registrations.filter((r) => r.eventId === eventId).length;
   }
 
-  listByUser(userId: string) {
+  find(id: string) {
+    return this.registrations.find((r) => r.id === id);
+  }
+
+  forUser(userId: string) {
     return this.registrations.filter((r) => r.userId === userId);
   }
 
@@ -38,6 +42,10 @@ class MockRegistrationStore {
     };
     this.registrations.push(registration);
     return registration;
+  }
+
+  remove(id: string) {
+    this.registrations = this.registrations.filter((r) => r.id !== id);
   }
 }
 

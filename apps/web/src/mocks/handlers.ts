@@ -1,6 +1,6 @@
 import { createOpenApiHttp } from 'openapi-msw';
 import type { paths } from '../api/schema';
-import type { EventDetail, EventSummary, FieldError, MyRegistration } from '../api/types';
+import type { EventDetail, EventSummary, FieldError } from '../api/types';
 import { mockAuth } from './auth';
 import { categories as defaultCategories, events as defaultEvents } from './fixtures';
 import { mockRegistrations } from './registrations';
@@ -131,26 +131,63 @@ export function createHandlers(events = defaultEvents, categories = defaultCateg
       });
     }),
 
-    http.get('/api/v1/me/registrations', ({ request, response }) => {
+    // US06 : mes inscriptions, passées comprises, de l'événement le plus proche au plus lointain.
+    http.get('/api/v1/registrations/me', ({ request, response }) => {
       const user = mockAuth.currentUser;
       if (!user) {
         return response(401).json(
           errorBody(401, 'Unauthorized', 'Authentification requise', new URL(request.url).pathname),
         );
       }
-      const now = Date.now();
-      const startOf = (r: MyRegistration) => new Date(r.event.startsAt).getTime();
       const mine = mockRegistrations
-        .listByUser(user.id)
-        .flatMap(({ id, createdAt, eventId }): MyRegistration[] => {
-          const event = events.find((e) => e.id === eventId);
-          return event ? [{ id, createdAt, event: withRegistrations(toSummary(event)) }] : [];
+        .forUser(user.id)
+        .flatMap((registration) => {
+          const event = events.find((e) => e.id === registration.eventId);
+          return event
+            ? [{ id: registration.id, createdAt: registration.createdAt, event: toSummary(event) }]
+            : [];
         })
-        .sort((a, b) => startOf(a) - startOf(b));
-      return response(200).json({
-        upcoming: mine.filter((r) => startOf(r) > now),
-        past: mine.filter((r) => startOf(r) <= now).reverse(),
-      });
+        .map((item) => ({ ...item, event: withRegistrations(item.event) }))
+        .sort((a, b) => a.event.startsAt.localeCompare(b.event.startsAt));
+      return response(200).json(mine);
+    }),
+
+    // US06 : annulation réservée au propriétaire (403), refusée pour un événement passé (409).
+    http.delete('/api/v1/registrations/{id}', ({ params, request, response }) => {
+      const path = new URL(request.url).pathname;
+      const user = mockAuth.currentUser;
+      if (!user) {
+        return response(401).json(errorBody(401, 'Unauthorized', 'Authentification requise', path));
+      }
+      const registration = mockRegistrations.find(params.id);
+      if (!registration) {
+        return response(404).json(
+          errorBody(404, 'Not Found', "L'inscription demandée n'existe pas", path),
+        );
+      }
+      if (registration.userId !== user.id) {
+        return response(403).json(
+          errorBody(
+            403,
+            'Forbidden',
+            "Vous ne pouvez pas annuler l'inscription d'un autre participant",
+            path,
+          ),
+        );
+      }
+      const event = events.find((e) => e.id === registration.eventId);
+      if (event && new Date(event.startsAt).getTime() <= Date.now()) {
+        return response(409).json(
+          errorBody(
+            409,
+            'Conflict',
+            "Impossible d'annuler l'inscription à un événement passé",
+            path,
+          ),
+        );
+      }
+      mockRegistrations.remove(registration.id);
+      return response(204).empty();
     }),
 
     http.get('/api/v1/categories', ({ response }) => response(200).json(categories)),

@@ -506,46 +506,46 @@
         ]
       }
     },
-    "/api/v1/me/registrations": {
+    "/api/v1/registrations/me": {
       "get": {
-        "description": "US07 : inscriptions de l'utilisateur connecté, à venir et passées séparées. Un événement est passé dès qu'il a commencé, comme pour l'inscription.",
+        "description": "US06 : inscriptions de l'utilisateur connecté, de l'événement le plus proche au plus lointain, passées comprises (l'annulation n'est possible que pour les événements à venir).",
         "operationId": "listMyRegistrations",
         "parameters": [],
         "responses": {
           "200": {
-            "description": "",
+            "description": "Liste vide si aucune inscription",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MyRegistrationsDto"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserRegistrationDto"
+                  }
                 },
-                "example": {
-                  "upcoming": [
-                    {
-                      "id": "9b1d2c3e-4f5a-4b6c-8d7e-0a1b2c3d4e5f",
-                      "createdAt": "2026-11-20T10:33:21.774Z",
-                      "event": {
-                        "id": "3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11",
-                        "title": "Nuit du jazz",
-                        "startsAt": "2026-12-05T19:00:00.000Z",
-                        "endsAt": "2026-12-05T22:00:00.000Z",
-                        "venue": "Le Transbordeur",
-                        "city": "Lyon",
-                        "capacity": 300,
-                        "priceCents": 1500,
-                        "remainingSeats": 41,
-                        "isFull": false,
-                        "imageUrl": null,
-                        "category": {
-                          "id": "5c2f8a10-7d3b-4e6f-8a91-2b3c4d5e6f70",
-                          "name": "Concert",
-                          "slug": "concert"
-                        }
+                "example": [
+                  {
+                    "id": "9b1d2c3e-4f5a-4b6c-8d7e-0a1b2c3d4e5f",
+                    "createdAt": "2026-11-20T10:33:21.774Z",
+                    "event": {
+                      "id": "3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11",
+                      "title": "Nuit du jazz",
+                      "startsAt": "2026-12-05T18:00:00.000Z",
+                      "endsAt": "2026-12-05T21:00:00.000Z",
+                      "venue": "Le Transbordeur",
+                      "city": "Lyon",
+                      "capacity": 300,
+                      "priceCents": 1500,
+                      "remainingSeats": 41,
+                      "isFull": false,
+                      "imageUrl": null,
+                      "category": {
+                        "id": "5d1f0c52-6a3e-4b8e-9a43-0d7f1e2b9c22",
+                        "name": "Concert",
+                        "slug": "concert"
                       }
                     }
-                  ],
-                  "past": []
-                }
+                  }
+                ]
               }
             }
           },
@@ -560,7 +560,7 @@
                   "statusCode": 401,
                   "error": "Unauthorized",
                   "message": "Authentification requise",
-                  "path": "/api/v1/me/registrations",
+                  "path": "/api/v1/registrations/me",
                   "timestamp": "2026-11-20T10:33:21.774Z"
                 }
               }
@@ -573,6 +573,105 @@
           }
         ],
         "summary": "Mes inscriptions",
+        "tags": [
+          "registrations"
+        ]
+      }
+    },
+    "/api/v1/registrations/{id}": {
+      "delete": {
+        "description": "US06 : supprime l'inscription et libère la place (les places restantes augmentent de 1). Réservé au propriétaire de l'inscription (403 sinon) ; impossible pour un événement passé (409).",
+        "operationId": "cancelRegistration",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Identifiant de l'inscription",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Inscription annulée"
+          },
+          "401": {
+            "description": "Pas de session, ou session expirée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "statusCode": 401,
+                  "error": "Unauthorized",
+                  "message": "Authentification requise",
+                  "path": "/api/v1/registrations/9b1d2c3e-4f5a-4b6c-8d7e-0a1b2c3d4e5f",
+                  "timestamp": "2026-11-20T10:33:21.774Z"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "L'inscription appartient à un autre utilisateur",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "statusCode": 403,
+                  "error": "Forbidden",
+                  "message": "Vous ne pouvez pas annuler l'inscription d'un autre participant",
+                  "path": "/api/v1/registrations/9b1d2c3e-4f5a-4b6c-8d7e-0a1b2c3d4e5f",
+                  "timestamp": "2026-11-20T10:33:21.774Z"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Inscription inconnue (ou déjà annulée)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "statusCode": 404,
+                  "error": "Not Found",
+                  "message": "L'inscription demandée n'existe pas",
+                  "path": "/api/v1/registrations/9b1d2c3e-4f5a-4b6c-8d7e-0a1b2c3d4e5f",
+                  "timestamp": "2026-11-20T10:33:21.774Z"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Événement déjà passé",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "statusCode": 409,
+                  "error": "Conflict",
+                  "message": "Impossible d'annuler l'inscription à un événement passé",
+                  "path": "/api/v1/registrations/9b1d2c3e-4f5a-4b6c-8d7e-0a1b2c3d4e5f",
+                  "timestamp": "2026-11-20T10:33:21.774Z"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Annuler une inscription",
         "tags": [
           "registrations"
         ]
@@ -1039,50 +1138,30 @@
           "isFull"
         ]
       },
-      "MyRegistrationDto": {
+      "UserRegistrationDto": {
         "type": "object",
         "properties": {
           "id": {
             "type": "string",
-            "format": "uuid",
-            "description": "Identifiant de l'inscription"
+            "format": "uuid"
           },
           "createdAt": {
             "type": "string",
-            "format": "date-time",
-            "description": "Date de l'inscription"
+            "format": "date-time"
           },
           "event": {
-            "$ref": "#/components/schemas/EventSummaryDto"
+            "description": "Événement, avec ses places restantes à jour (l'annulation en libère une)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EventSummaryDto"
+              }
+            ]
           }
         },
         "required": [
           "id",
           "createdAt",
           "event"
-        ]
-      },
-      "MyRegistrationsDto": {
-        "type": "object",
-        "properties": {
-          "upcoming": {
-            "description": "Événements qui n'ont pas commencé, du plus proche au plus lointain",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/MyRegistrationDto"
-            }
-          },
-          "past": {
-            "description": "Événements commencés ou terminés, du plus récent au plus ancien",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/MyRegistrationDto"
-            }
-          }
-        },
-        "required": [
-          "upcoming",
-          "past"
         ]
       }
     }
