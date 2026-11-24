@@ -26,5 +26,6 @@ services:
 
 volumes:
   postgres-data:
-  # Réservé au stockage des images d'événements (US08, Sprint 3)
+  # Images des événements (US08) : à monter sur UPLOADS_DIR quand l'API tourne en conteneur,
+  # par exemple `event-images:/app/uploads` avec UPLOADS_DIR=/app/uploads.
   event-images:
