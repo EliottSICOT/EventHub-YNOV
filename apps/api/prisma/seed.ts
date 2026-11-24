@@ -152,8 +152,8 @@ async function main() {
     }
   }
 
-  // Un événement passé : absent du catalogue par défaut.
-  await prisma.event.create({
+  // Un événement passé : absent du catalogue par défaut, visible dans « Mes inscriptions ».
+  const pastEvent = await prisma.event.create({
     data: {
       title: 'Édition précédente du meetup',
       description: 'Événement passé, conservé pour vérifier le filtre par défaut.',
@@ -164,6 +164,9 @@ async function main() {
       categoryId: createdCategories.at(-1)!.id,
       organizerId: organizers[0].id,
     },
+  });
+  await prisma.registration.createMany({
+    data: participants.slice(0, 5).map((p) => ({ eventId: pastEvent.id, userId: p.id })),
   });
 
   console.log(`Seed terminé : ${index + 1} événements, ${createdCategories.length} catégories.`);
