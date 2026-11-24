@@ -120,15 +120,74 @@ export function createHandlers(events = defaultEvents, categories = defaultCateg
       }
       if (withRegistrations(event).isFull) return conflict('Cet événement est complet');
 
-      mockRegistrations.add(event.id, user.id);
+      const registration = mockRegistrations.add(event.id, user.id);
       const { remainingSeats, isFull } = withRegistrations(event);
       return response(201).json({
-        id: crypto.randomUUID(),
+        id: registration.id,
         eventId: event.id,
-        createdAt: new Date().toISOString(),
+        createdAt: registration.createdAt,
         remainingSeats,
         isFull,
       });
+    }),
+
+    // US06 : mes inscriptions, passées comprises, de l'événement le plus proche au plus lointain.
+    http.get('/api/v1/registrations/me', ({ request, response }) => {
+      const user = mockAuth.currentUser;
+      if (!user) {
+        return response(401).json(
+          errorBody(401, 'Unauthorized', 'Authentification requise', new URL(request.url).pathname),
+        );
+      }
+      const mine = mockRegistrations
+        .forUser(user.id)
+        .flatMap((registration) => {
+          const event = events.find((e) => e.id === registration.eventId);
+          return event
+            ? [{ id: registration.id, createdAt: registration.createdAt, event: toSummary(event) }]
+            : [];
+        })
+        .map((item) => ({ ...item, event: withRegistrations(item.event) }))
+        .sort((a, b) => a.event.startsAt.localeCompare(b.event.startsAt));
+      return response(200).json(mine);
+    }),
+
+    // US06 : annulation réservée au propriétaire (403), refusée pour un événement passé (409).
+    http.delete('/api/v1/registrations/{id}', ({ params, request, response }) => {
+      const path = new URL(request.url).pathname;
+      const user = mockAuth.currentUser;
+      if (!user) {
+        return response(401).json(errorBody(401, 'Unauthorized', 'Authentification requise', path));
+      }
+      const registration = mockRegistrations.find(params.id);
+      if (!registration) {
+        return response(404).json(
+          errorBody(404, 'Not Found', "L'inscription demandée n'existe pas", path),
+        );
+      }
+      if (registration.userId !== user.id) {
+        return response(403).json(
+          errorBody(
+            403,
+            'Forbidden',
+            "Vous ne pouvez pas annuler l'inscription d'un autre participant",
+            path,
+          ),
+        );
+      }
+      const event = events.find((e) => e.id === registration.eventId);
+      if (event && new Date(event.startsAt).getTime() <= Date.now()) {
+        return response(409).json(
+          errorBody(
+            409,
+            'Conflict',
+            "Impossible d'annuler l'inscription à un événement passé",
+            path,
+          ),
+        );
+      }
+      mockRegistrations.remove(registration.id);
+      return response(204).empty();
     }),
 
     http.get('/api/v1/categories', ({ response }) => response(200).json(categories)),
