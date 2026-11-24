@@ -1,6 +1,6 @@
 import { useEffect, useId, useState } from 'react';
 import type { Category } from '../../api/types';
-import type { EventFilters as Filters, FilterKey } from './filters';
+import { todayLocalDate, type EventFilters as Filters, type FilterKey } from './filters';
 
 interface EventFiltersProps {
   value: Filters;
@@ -51,6 +51,7 @@ export function EventFilters({
           id={`${id}-from`}
           type="date"
           value={value.from ?? ''}
+          min={todayLocalDate()}
           max={value.to}
           onChange={(e) => onChange({ from: e.target.value || undefined })}
         />

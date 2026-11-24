@@ -43,6 +43,12 @@ export function updateSearchParams(
   return next;
 }
 
+/** Date du jour en heure locale, au format `YYYY-MM-DD` des champs `<input type="date">`. */
+export function todayLocalDate(now: Date = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
+
 export function hasActiveFilters(filters: EventFilters): boolean {
   return FILTER_KEYS.some((key) => filters[key] !== undefined);
 }
