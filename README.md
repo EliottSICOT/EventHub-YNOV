@@ -138,7 +138,7 @@ Les tests e2e créent la base `eventhub_test` si besoin et refusent de tourner s
 | Sprint | Stories              | État                                    |
 | ------ | -------------------- | --------------------------------------- |
 | 1      | US01, US02, US03     | Livré                                   |
-| 2      | US04, US05           | En cours : US04 livrée, US05 Back livré |
+| 2      | US04, US05           | Livré                                   |
 | 3      | US06 à US09          | À venir                                 |
 | 4      | US10 à US13 (+ US14) | À venir                                 |
 

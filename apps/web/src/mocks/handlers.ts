@@ -3,11 +3,20 @@ import type { paths } from '../api/schema';
 import type { EventDetail, EventSummary, FieldError } from '../api/types';
 import { mockAuth } from './auth';
 import { categories as defaultCategories, events as defaultEvents } from './fixtures';
+import { mockRegistrations } from './registrations';
 
 const http = createOpenApiHttp<paths>({ baseUrl: '*' });
 
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 const DAY = 24 * 60 * 60 * 1000;
+
+/** Applique les inscriptions simulées (US05) aux places restantes d'une fixture. */
+function withRegistrations<T extends { id: string; remainingSeats: number; isFull: boolean }>(
+  event: T,
+): T {
+  const remainingSeats = Math.max(0, event.remainingSeats - mockRegistrations.count(event.id));
+  return { ...event, remainingSeats, isFull: remainingSeats === 0 };
+}
 
 function toSummary(event: EventDetail): EventSummary {
   const { description: _d, address: _a, organizer: _o, ...summary } = event;
@@ -61,7 +70,9 @@ export function createHandlers(events = defaultEvents, categories = defaultCateg
         .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
 
       return response(200).json({
-        data: matching.slice((page - 1) * pageSize, page * pageSize).map(toSummary),
+        data: matching
+          .slice((page - 1) * pageSize, page * pageSize)
+          .map((e) => withRegistrations(toSummary(e))),
         meta: {
           page,
           pageSize,
@@ -83,7 +94,41 @@ export function createHandlers(events = defaultEvents, categories = defaultCateg
           ),
         );
       }
-      return response(200).json(event);
+      return response(200).json(withRegistrations(event));
+    }),
+
+    http.post('/api/v1/events/{id}/registrations', ({ params, request, response }) => {
+      const path = new URL(request.url).pathname;
+      const user = mockAuth.currentUser;
+      if (!user) {
+        return response(401).json(errorBody(401, 'Unauthorized', 'Authentification requise', path));
+      }
+      const event = events.find((e) => e.id === params.id);
+      if (!event) {
+        return response(404).json(
+          errorBody(404, 'Not Found', "L'événement demandé n'existe pas", path),
+        );
+      }
+      const conflict = (message: string) =>
+        response(409).json(errorBody(409, 'Conflict', message, path));
+
+      if (mockRegistrations.has(event.id, user.id)) {
+        return conflict('Vous êtes déjà inscrit à cet événement');
+      }
+      if (new Date(event.startsAt).getTime() <= Date.now()) {
+        return conflict('Cet événement est déjà passé');
+      }
+      if (withRegistrations(event).isFull) return conflict('Cet événement est complet');
+
+      mockRegistrations.add(event.id, user.id);
+      const { remainingSeats, isFull } = withRegistrations(event);
+      return response(201).json({
+        id: crypto.randomUUID(),
+        eventId: event.id,
+        createdAt: new Date().toISOString(),
+        remainingSeats,
+        isFull,
+      });
     }),
 
     http.get('/api/v1/categories', ({ response }) => response(200).json(categories)),
