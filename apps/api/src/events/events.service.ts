@@ -63,8 +63,10 @@ export function buildEventsWhere(
   query: Pick<ListEventsQueryDto, 'from' | 'to' | 'category' | 'city'>,
   now: Date,
 ): Prisma.EventWhereInput {
+  // Le catalogue n'affiche jamais d'événement passé : un `from` antérieur à maintenant est ignoré.
+  const from = query.from ? new Date(query.from) : now;
   const startsAt: Prisma.DateTimeFilter = {
-    gte: query.from ? new Date(query.from) : now,
+    gte: from.getTime() > now.getTime() ? from : now,
   };
   if (query.to) {
     if (DATE_ONLY.test(query.to)) {
