@@ -1,9 +1,15 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { remainingSeats } from '../events/events.mapper.js';
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { eventSummaryInclude, remainingSeats, toEventSummary } from '../events/events.mapper.js';
 import { EVENT_NOT_FOUND_MESSAGE } from '../events/events.service.js';
 import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { RegistrationDto } from './dto/registration.dto.js';
+import type { UserRegistrationDto } from './dto/user-registration.dto.js';
 import { REGISTRATION_MESSAGES } from './registrations.constants.js';
 
 @Injectable()
@@ -64,6 +70,51 @@ export class RegistrationsService {
         throw new ConflictException(REGISTRATION_MESSAGES.alreadyRegistered);
       }
       throw error;
+    }
+  }
+
+  /** Inscriptions de `userId`, de l'événement le plus proche au plus lointain (US06). */
+  async listForUser(userId: string): Promise<UserRegistrationDto[]> {
+    const registrations = await this.prisma.registration.findMany({
+      where: { userId },
+      include: { event: { include: eventSummaryInclude } },
+      orderBy: [{ event: { startsAt: 'asc' } }, { id: 'asc' }],
+    });
+    return registrations.map((registration) => ({
+      id: registration.id,
+      createdAt: registration.createdAt.toISOString(),
+      event: toEventSummary(registration.event),
+    }));
+  }
+
+  /**
+   * Annule l'inscription `registrationId` de `userId` (US06) : la place est libérée,
+   * puisque les places restantes se déduisent des inscriptions.
+   * 404 si elle n'existe pas, 403 si elle appartient à quelqu'un d'autre,
+   * 409 si l'événement est déjà passé.
+   */
+  async cancel(registrationId: string, userId: string, now: Date = new Date()): Promise<void> {
+    const registration = await this.prisma.registration.findUnique({
+      where: { id: registrationId },
+      select: { userId: true, event: { select: { startsAt: true } } },
+    });
+    if (!registration) {
+      throw new NotFoundException(REGISTRATION_MESSAGES.notFound);
+    }
+    if (registration.userId !== userId) {
+      throw new ForbiddenException(REGISTRATION_MESSAGES.notOwner);
+    }
+    if (registration.event.startsAt <= now) {
+      throw new ConflictException(REGISTRATION_MESSAGES.cancelPast);
+    }
+
+    // `userId` dans le filtre : même sous concurrence, on ne supprime que sa propre inscription.
+    const { count } = await this.prisma.registration.deleteMany({
+      where: { id: registrationId, userId },
+    });
+    if (count === 0) {
+      // Annulée entre-temps (double clic) : elle n'existe plus.
+      throw new NotFoundException(REGISTRATION_MESSAGES.notFound);
     }
   }
 }
