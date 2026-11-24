@@ -1,16 +1,17 @@
 import { Navigate, type RouteObject } from 'react-router';
-import { RequireAuth } from '../features/auth/RequireAuth';
+import { RequireAuth, RequireOrganizer } from '../features/auth/RequireAuth';
 import { SignInPage } from '../features/auth/SignInPage';
 import { SignUpPage } from '../features/auth/SignUpPage';
 import { EventDetailPage } from '../features/events/EventDetailPage';
 import { EventListPage } from '../features/events/EventListPage';
+import { CreateEventPage } from '../features/organizer/CreateEventPage';
 import { MyRegistrationsPage } from '../features/registrations/MyRegistrationsPage';
 import { Layout } from './Layout';
 import { NotFoundPage } from './NotFoundPage';
 
 /**
- * Routes protégées (à venir) : les placer sous un élément `RequireAuth`
- * (`features/auth/RequireAuth.tsx`), avec `role="ORGANIZER"` pour les écrans organisateur.
+ * Routes protégées : sous un élément `RequireAuth` (`features/auth/RequireAuth.tsx`),
+ * ou `RequireOrganizer` pour les écrans organisateur.
  */
 export const routes: RouteObject[] = [
   {
@@ -28,6 +29,10 @@ export const routes: RouteObject[] = [
           // Adresse citée par les critères d'US07.
           { path: 'me/registrations', element: <Navigate to="/mes-inscriptions" replace /> },
         ],
+      },
+      {
+        element: <RequireOrganizer />,
+        children: [{ path: 'organisateur/evenements/nouveau', element: <CreateEventPage /> }],
       },
       { path: '*', element: <NotFoundPage /> },
     ],

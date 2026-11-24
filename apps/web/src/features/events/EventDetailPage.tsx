@@ -1,8 +1,9 @@
-import { Link, useParams } from 'react-router';
+import { Link, useLocation, useParams } from 'react-router';
 import { ApiError } from '../../api/client';
 import { useEvent } from '../../api/queries';
 import { Spinner } from '../../components/Spinner';
 import { StatusMessage } from '../../components/StatusMessage';
+import type { CreatedEventState } from '../organizer/CreateEventPage';
 import { RegisterButton } from '../registrations/RegisterButton';
 import { formatDateTime, formatPrice } from './format';
 import { SeatsBadge } from './SeatsBadge';
@@ -11,6 +12,8 @@ import { SeatsBadge } from './SeatsBadge';
 export function EventDetailPage() {
   const { id = '' } = useParams();
   const { data: event, isPending, isError, error, refetch } = useEvent(id);
+  // Arrivée depuis le formulaire de création (US08).
+  const created = useLocation().state as CreatedEventState | null;
 
   const back = (
     <Link to="/events" className="back-link">
@@ -43,6 +46,16 @@ export function EventDetailPage() {
   return (
     <article className="page detail">
       {back}
+      {created?.created && (
+        <p className="notice notice--success" role="status">
+          Événement créé : il est maintenant visible dans le catalogue.
+        </p>
+      )}
+      {created?.imageError && (
+        <p className="notice notice--warning" role="alert">
+          L'événement est bien créé, mais l'image n'a pas été enregistrée : {created.imageError}
+        </p>
+      )}
       {event.imageUrl ? (
         <img className="detail__image" src={event.imageUrl} alt={`Visuel de ${event.title}`} />
       ) : (
