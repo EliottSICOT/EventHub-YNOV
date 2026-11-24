@@ -257,7 +257,7 @@ export function createHandlers(events = defaultEvents, categories = defaultCateg
       }
       const image = (await request.formData()).get('image');
       const message = imageError(image);
-      if (message || !(image instanceof File)) {
+      if (message || !isFile(image)) {
         return response(400).json(
           validationError(path, [{ field: 'image', message: message ?? '' }]),
         );
@@ -292,9 +292,17 @@ const CREATE_EVENT_FIELDS = new Set([
   'priceCents',
 ]);
 
+/**
+ * Champ fichier d'un multipart. Pas de `instanceof File` : dans les tests (jsdom), le fichier
+ * décodé par le `fetch` de Node n'est pas une instance du `File` global de jsdom.
+ */
+function isFile(value: FormDataEntryValue | null): value is File {
+  return value !== null && typeof value !== 'string';
+}
+
 /** Contrôle de l'image comme l'API (le mock se fie au type annoncé, l'API lit le contenu). */
 function imageError(image: FormDataEntryValue | null): string | undefined {
-  if (!(image instanceof File) || image.size === 0) return "L'image est obligatoire";
+  if (!isFile(image) || image.size === 0) return "L'image est obligatoire";
   if (!IMAGE_TYPES.includes(image.type)) return "L'image doit être au format JPG ou PNG";
   if (image.size > MAX_IMAGE_BYTES) return "L'image ne doit pas dépasser 2 Mo";
   return undefined;
