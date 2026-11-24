@@ -1,6 +1,6 @@
 import { createOpenApiHttp } from 'openapi-msw';
 import type { paths } from '../api/schema';
-import type { EventDetail, EventSummary, FieldError } from '../api/types';
+import type { EventDetail, EventSummary, FieldError, MyRegistration } from '../api/types';
 import { mockAuth } from './auth';
 import { categories as defaultCategories, events as defaultEvents } from './fixtures';
 import { mockRegistrations } from './registrations';
@@ -120,14 +120,36 @@ export function createHandlers(events = defaultEvents, categories = defaultCateg
       }
       if (withRegistrations(event).isFull) return conflict('Cet événement est complet');
 
-      mockRegistrations.add(event.id, user.id);
+      const registration = mockRegistrations.add(event.id, user.id);
       const { remainingSeats, isFull } = withRegistrations(event);
       return response(201).json({
-        id: crypto.randomUUID(),
+        id: registration.id,
         eventId: event.id,
-        createdAt: new Date().toISOString(),
+        createdAt: registration.createdAt,
         remainingSeats,
         isFull,
+      });
+    }),
+
+    http.get('/api/v1/me/registrations', ({ request, response }) => {
+      const user = mockAuth.currentUser;
+      if (!user) {
+        return response(401).json(
+          errorBody(401, 'Unauthorized', 'Authentification requise', new URL(request.url).pathname),
+        );
+      }
+      const now = Date.now();
+      const startOf = (r: MyRegistration) => new Date(r.event.startsAt).getTime();
+      const mine = mockRegistrations
+        .listByUser(user.id)
+        .flatMap(({ id, createdAt, eventId }): MyRegistration[] => {
+          const event = events.find((e) => e.id === eventId);
+          return event ? [{ id, createdAt, event: withRegistrations(toSummary(event)) }] : [];
+        })
+        .sort((a, b) => startOf(a) - startOf(b));
+      return response(200).json({
+        upcoming: mine.filter((r) => startOf(r) > now),
+        past: mine.filter((r) => startOf(r) <= now).reverse(),
       });
     }),
 
