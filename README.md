@@ -95,7 +95,7 @@ Toutes les erreurs suivent `ApiErrorDto` :
 | POST    | `/api/v1/auth/sign-in`              | US04       | Connexion : pose le cookie de session ; 401 générique si les identifiants sont faux                                                   |
 | POST    | `/api/v1/auth/sign-out`             | US04       | Déconnexion : supprime la session en base et efface le cookie ; 204                                                                   |
 | GET     | `/api/v1/auth/me`                   | US04       | Utilisateur connecté (id, email, prénom, nom, rôle) ; 401 sans session                                                                |
-| POST    | `/api/v1/events/{id}/registrations` | US05       | Inscription de l'utilisateur connecté, en transaction ; 201 avec les places restantes, 401, 404, 409 (déjà inscrit, complet ou passé) |
+| POST    | `/api/v1/events/{id}/registrations` | US05, US11 | Inscription de l'utilisateur connecté, en transaction ; 201 avec les places restantes, 401, 404, 409 (déjà inscrit, complet ou passé) |
 | GET     | `/api/v1/registrations/me`          | US06, US07 | Mes inscriptions (passées comprises), triées par date d'événement ; 401 sans session                                                  |
 | DELETE  | `/api/v1/registrations/{id}`        | US06       | Annulation d'une inscription, la place est libérée ; 204, 401, 403 (pas la mienne), 404, 409 (événement passé)                        |
 
@@ -113,6 +113,11 @@ Sans `from`, le catalogue n'affiche que les événements à venir. Une date seul
 - `POST /events/{id}/registrations` verrouille la ligne de l'événement (`SELECT … FOR UPDATE`) dans une transaction : les inscriptions simultanées au même événement passent l'une après l'autre, la capacité n'est jamais dépassée.
 - `DELETE /registrations/{id}` supprime l'inscription de son propriétaire uniquement (403 sinon) et refuse les événements passés (409) : les places restantes se déduisent des inscriptions, la place est donc libérée sans autre écriture.
 - La contrainte unique `(event_id, user_id)` garantit une seule inscription par utilisateur ; les refus (déjà inscrit, complet, passé) renvoient 409 avec un message distinct.
+- E-mail de confirmation (US11) : envoyé après la validation de la transaction, sans retarder la réponse. Un échec est journalisé (sans l'adresse du participant) et l'inscription reste valide.
+
+### E-mails
+
+En dev, l'API envoie à Mailpit : `pnpm db:up`, puis <http://localhost:8025>. Aucune variable n'est nécessaire ; `SMTP_HOST`, `SMTP_PORT` et `MAIL_FROM` permettent de viser un autre serveur, et `SMTP_HOST` vide désactive l'envoi (c'est le cas des tests e2e). Les liens des e-mails utilisent `FRONT_URL`.
 
 ## Scripts
 
@@ -143,6 +148,6 @@ Les tests e2e créent la base `eventhub_test` si besoin et refusent de tourner s
 | 1      | US01, US02, US03     | Livré                           |
 | 2      | US04, US05           | Livré                           |
 | 3      | US06 à US09          | En cours : US06 et US07 livrées |
-| 4      | US10 à US13 (+ US14) | À venir                         |
+| 4      | US10 à US13 (+ US14) | En cours : US11 livrée          |
 
 Le schéma Prisma contient déjà `users` et `registrations` : les places restantes se calculent à partir des inscriptions.

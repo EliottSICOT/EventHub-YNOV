@@ -38,7 +38,8 @@ export function RegisterButton({ event, now: nowProp }: RegisterButtonProps) {
           Inscrit ✓
         </button>
         <p className="register__confirmation" role="status">
-          Inscription confirmée : vous participez à « {event.title} ».{' '}
+          Inscription confirmée : vous participez à « {event.title} ». Vous allez recevoir un e-mail
+          de confirmation{user && <> à l'adresse {user.email}</>}.{' '}
           <Link to="/mes-inscriptions">Voir mes inscriptions</Link>
         </p>
       </div>

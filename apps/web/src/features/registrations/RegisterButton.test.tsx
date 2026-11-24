@@ -1,7 +1,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http as mswHttp, HttpResponse } from 'msw';
-import { DEMO_PASSWORD, mockAuth } from '../../mocks/auth';
+import { DEMO_PASSWORD, demoUsers, mockAuth } from '../../mocks/auth';
 import { events } from '../../mocks/fixtures';
 import { createHandlers } from '../../mocks/handlers';
 import { mockRegistrations } from '../../mocks/registrations';
@@ -47,6 +47,30 @@ describe('Inscription à un événement (US05, Front)', () => {
     );
     expect(screen.getByText(`${open.remainingSeats - 1} places restantes`)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Inscrit ✓' })).toBeDisabled();
+  });
+
+  it("annonce l'e-mail de confirmation, avec l'adresse du compte (US11)", async () => {
+    signIn();
+    const user = userEvent.setup();
+    renderApp(`/events/${open.id}`);
+
+    await user.click(await screen.findByRole('button', { name: "S'inscrire" }));
+
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      "Vous allez recevoir un e-mail de confirmation à l'adresse participant1@eventhub.test.",
+    );
+  });
+
+  it("n'annonce aucun e-mail quand l'inscription est refusée (US11)", async () => {
+    signIn();
+    mockRegistrations.add(open.id, demoUsers[0].id);
+    const user = userEvent.setup();
+    renderApp(`/events/${open.id}`);
+
+    await user.click(await screen.findByRole('button', { name: "S'inscrire" }));
+
+    await screen.findByRole('alert');
+    expect(screen.queryByText(/e-mail de confirmation/)).not.toBeInTheDocument();
   });
 
   it('désactive le bouton pendant la requête', async () => {

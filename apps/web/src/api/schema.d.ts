@@ -152,7 +152,7 @@ export interface paths {
         put?: never;
         /**
          * S'inscrire à un événement
-         * @description US05 : inscrit l'utilisateur connecté, dans une transaction qui verrouille l'événement : deux inscriptions simultanées ne peuvent pas dépasser la capacité. Une inscription est refusée (409) si l'utilisateur est déjà inscrit, si l'événement est complet ou s'il est passé.
+         * @description US05 : inscrit l'utilisateur connecté, dans une transaction qui verrouille l'événement : deux inscriptions simultanées ne peuvent pas dépasser la capacité. Une inscription est refusée (409) si l'utilisateur est déjà inscrit, si l'événement est complet ou s'il est passé. US11 : un e-mail de confirmation est envoyé ; un échec d'envoi n'annule pas l'inscription.
          */
         post: operations["registerToEvent"];
         delete?: never;
