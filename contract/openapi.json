@@ -409,6 +409,102 @@
           "categories"
         ]
       }
+    },
+    "/api/v1/events/{id}/registrations": {
+      "post": {
+        "description": "US05 : inscrit l'utilisateur connecté, dans une transaction qui verrouille l'événement : deux inscriptions simultanées ne peuvent pas dépasser la capacité. Une inscription est refusée (409) si l'utilisateur est déjà inscrit, si l'événement est complet ou s'il est passé.",
+        "operationId": "registerToEvent",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Identifiant de l'événement",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Inscription enregistrée ; renvoie les places restantes à jour",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrationDto"
+                },
+                "example": {
+                  "id": "9b1d2c3e-4f5a-4b6c-8d7e-0a1b2c3d4e5f",
+                  "eventId": "3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11",
+                  "createdAt": "2026-11-20T10:33:21.774Z",
+                  "remainingSeats": 41,
+                  "isFull": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Pas de session, ou session expirée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "statusCode": 401,
+                  "error": "Unauthorized",
+                  "message": "Authentification requise",
+                  "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11/registrations",
+                  "timestamp": "2026-11-20T10:33:21.774Z"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Événement inconnu",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "statusCode": 404,
+                  "error": "Not Found",
+                  "message": "L'événement demandé n'existe pas",
+                  "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11/registrations",
+                  "timestamp": "2026-11-20T10:33:21.774Z"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Déjà inscrit, événement complet ou événement passé",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "statusCode": 409,
+                  "error": "Conflict",
+                  "message": "Vous êtes déjà inscrit à cet événement",
+                  "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11/registrations",
+                  "timestamp": "2026-11-20T10:33:21.774Z"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "S'inscrire à un événement",
+        "tags": [
+          "registrations"
+        ]
+      }
     }
   },
   "info": {
@@ -835,6 +931,40 @@
           "description",
           "address",
           "organizer"
+        ]
+      },
+      "RegistrationDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "eventId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "remainingSeats": {
+            "type": "integer",
+            "example": 12,
+            "minimum": 0,
+            "description": "Places restantes de l'événement, inscription comprise"
+          },
+          "isFull": {
+            "type": "boolean",
+            "description": "Vrai quand il ne reste plus aucune place"
+          }
+        },
+        "required": [
+          "id",
+          "eventId",
+          "createdAt",
+          "remainingSeats",
+          "isFull"
         ]
       }
     }
