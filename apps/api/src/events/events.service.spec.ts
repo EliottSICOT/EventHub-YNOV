@@ -131,7 +131,7 @@ describe('EventsService', () => {
   });
 
   describe('create (US08)', () => {
-    const input: CreateEventDto = {
+    const input = {
       title: 'Nuit du jazz',
       description: 'Trois quartets sur scène.',
       categoryId: 'c1',
@@ -140,7 +140,7 @@ describe('EventsService', () => {
       city: 'Lyon',
       capacity: 300,
       priceCents: 0,
-    };
+    } satisfies CreateEventDto;
     const created = {
       ...input,
       id: 'e1',

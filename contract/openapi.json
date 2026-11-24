@@ -420,8 +420,6 @@
                       "statusCode": 400,
                       "error": "Bad Request",
                       "message": "La requête contient des champs invalides",
-                      "path": "/api/v1/events",
-                      "timestamp": "2026-11-20T10:33:21.774Z",
                       "details": [
                         {
                           "field": "startsAt",
@@ -435,7 +433,9 @@
                           "field": "priceCents",
                           "message": "Le prix doit être positif ou nul"
                         }
-                      ]
+                      ],
+                      "path": "/api/v1/events",
+                      "timestamp": "2026-11-20T10:33:21.774Z"
                     }
                   },
                   "unknownCategory": {
@@ -444,14 +444,14 @@
                       "statusCode": 400,
                       "error": "Bad Request",
                       "message": "La requête contient des champs invalides",
-                      "path": "/api/v1/events",
-                      "timestamp": "2026-11-20T10:33:21.774Z",
                       "details": [
                         {
                           "field": "categoryId",
                           "message": "La catégorie choisie n'existe pas"
                         }
-                      ]
+                      ],
+                      "path": "/api/v1/events",
+                      "timestamp": "2026-11-20T10:33:21.774Z"
                     }
                   }
                 }
@@ -631,14 +631,14 @@
                       "statusCode": 400,
                       "error": "Bad Request",
                       "message": "La requête contient des champs invalides",
-                      "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11/image",
-                      "timestamp": "2026-11-20T10:33:21.774Z",
                       "details": [
                         {
                           "field": "image",
                           "message": "L'image doit être au format JPG ou PNG"
                         }
-                      ]
+                      ],
+                      "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11/image",
+                      "timestamp": "2026-11-20T10:33:21.774Z"
                     }
                   },
                   "tooLarge": {
@@ -647,14 +647,14 @@
                       "statusCode": 400,
                       "error": "Bad Request",
                       "message": "La requête contient des champs invalides",
-                      "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11/image",
-                      "timestamp": "2026-11-20T10:33:21.774Z",
                       "details": [
                         {
                           "field": "image",
                           "message": "L'image ne doit pas dépasser 2 Mo"
                         }
-                      ]
+                      ],
+                      "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11/image",
+                      "timestamp": "2026-11-20T10:33:21.774Z"
                     }
                   }
                 }
