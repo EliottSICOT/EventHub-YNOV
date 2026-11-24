@@ -560,7 +560,7 @@ export interface operations {
             query?: {
                 page?: number;
                 pageSize?: number;
-                /** @description Début de la période (date `YYYY-MM-DD` ou date-heure ISO 8601). Par défaut : maintenant, le catalogue n'affiche donc que les événements à venir. */
+                /** @description Début de la période (date `YYYY-MM-DD` ou date-heure ISO 8601). Par défaut : maintenant. Une date passée est ramenée à maintenant : le catalogue n'affiche jamais d'événement passé. */
                 from?: string;
                 /** @description Fin de la période, incluse (une date seule couvre toute la journée, en UTC). */
                 to?: string;
