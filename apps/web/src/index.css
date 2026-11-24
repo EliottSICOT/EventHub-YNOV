@@ -56,7 +56,8 @@ body {
 }
 
 h1,
-h2 {
+h2,
+h3 {
   line-height: 1.2;
   margin: 0;
 }
@@ -92,14 +93,16 @@ a {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  flex-wrap: wrap;
+  gap: 8px 16px;
 }
 
 /* Zone de session : hauteur fixe pour que rien ne bouge pendant le chargement de /auth/me */
 .session {
   display: flex;
   align-items: center;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 4px 12px;
   min-height: 36px;
   font-weight: 600;
 }
@@ -364,6 +367,20 @@ a.button {
 .badge--full {
   background: var(--color-full-bg);
   color: var(--color-full-text);
+}
+
+/* Mes inscriptions */
+.registrations {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.registrations h2 {
+  font-size: 1.2rem;
+}
+.registrations__empty {
+  margin: 0;
+  color: var(--color-muted);
 }
 
 /* Pagination */
