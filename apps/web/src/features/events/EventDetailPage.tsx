@@ -3,6 +3,7 @@ import { ApiError } from '../../api/client';
 import { useEvent } from '../../api/queries';
 import { Spinner } from '../../components/Spinner';
 import { StatusMessage } from '../../components/StatusMessage';
+import { RegisterButton } from '../registrations/RegisterButton';
 import { formatDateTime, formatPrice } from './format';
 import { SeatsBadge } from './SeatsBadge';
 
@@ -96,12 +97,7 @@ export function EventDetailPage() {
       </section>
 
       <div className="detail__actions">
-        {/* Le bouton « S'inscrire » arrive avec US05 (Sprint 2) ; complet, il est remplacé par « Complet ». */}
-        {event.isFull && (
-          <button type="button" className="button" disabled>
-            Complet
-          </button>
-        )}
+        <RegisterButton event={event} />
       </div>
     </article>
   );
