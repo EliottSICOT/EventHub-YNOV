@@ -136,6 +136,20 @@ describe('Catalogue des événements (e2e)', () => {
       expect(res.body.data.map((e: { id: string }) => e.id)).toEqual([ids.rock, ids.run]);
     });
 
+    it('n’affiche aucun événement passé, même avec un `from` dans le passé (#46)', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/events?from=2020-01-01')
+        .expect(200);
+
+      const now = Date.now();
+      expect(res.body.data.map((e: { id: string }) => e.id)).not.toContain(ids.past);
+      expect(
+        res.body.data.filter((e: { startsAt: string }) => Date.parse(e.startsAt) < now),
+      ).toEqual([]);
+      // Même résultat que sans filtre : 4 événements à venir, compteur cohérent.
+      expect(res.body.meta).toEqual({ page: 1, pageSize: 12, total: 4, totalPages: 1 });
+    });
+
     it('renvoie une liste vide sans erreur', async () => {
       const res = await request(app.getHttpServer())
         .get('/api/v1/events?city=Marseille')

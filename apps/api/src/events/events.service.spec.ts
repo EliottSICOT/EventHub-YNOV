@@ -12,6 +12,20 @@ describe('buildEventsWhere', () => {
     expect(buildEventsWhere({}, NOW)).toEqual({ startsAt: { gte: NOW } });
   });
 
+  it('ramène un `from` passé à maintenant (#46)', () => {
+    expect(buildEventsWhere({ from: '2020-01-01' }, NOW).startsAt).toEqual({ gte: NOW });
+  });
+
+  it('ramène à maintenant un `from` du jour même déjà écoulé', () => {
+    expect(buildEventsWhere({ from: '2026-11-20' }, NOW).startsAt).toEqual({ gte: NOW });
+  });
+
+  it('conserve un `from` futur', () => {
+    expect(buildEventsWhere({ from: '2026-12-01T18:00:00Z' }, NOW).startsAt).toEqual({
+      gte: new Date('2026-12-01T18:00:00Z'),
+    });
+  });
+
   it('inclut toute la journée quand `to` est une date seule', () => {
     const where = buildEventsWhere({ from: '2026-12-01', to: '2026-12-31' }, NOW);
     expect(where.startsAt).toEqual({

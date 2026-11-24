@@ -99,7 +99,7 @@ Toutes les erreurs suivent `ApiErrorDto` :
 | GET     | `/api/v1/registrations/me`          | US06, US07 | Mes inscriptions (passées comprises), triées par date d'événement ; 401 sans session                                                  |
 | DELETE  | `/api/v1/registrations/{id}`        | US06       | Annulation d'une inscription, la place est libérée ; 204, 401, 403 (pas la mienne), 404, 409 (événement passé)                        |
 
-Sans `from`, le catalogue n'affiche que les événements à venir. Une date seule dans `to` inclut toute la journée.
+Le catalogue n'affiche jamais d'événement passé : sans `from`, il part de maintenant, et un `from` dans le passé est ramené à maintenant. Une date seule dans `to` inclut toute la journée. Côté Front, le champ « Du » n'accepte pas de date passée, et une page au-delà de la dernière (`?page=99`) est remplacée par la dernière page existante.
 
 ### Authentification
 
