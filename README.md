@@ -14,7 +14,7 @@ Plateforme de gestion d'événements : un visiteur consulte le catalogue, un par
 EventHub-YNOV/
 ├── apps/
 │   ├── api/          NestJS + Prisma (modules auth, events, categories ; registrations à venir)
-│   └── web/          SPA React (Liste, Détail, Inscription, Connexion ; mocks MSW dans src/mocks)
+│   └── web/          SPA React (Liste, Détail, Inscription, Connexion, Mes inscriptions ; mocks MSW dans src/mocks)
 ├── contract/
 │   └── openapi.json  contrat généré par l'API, source des types du Front
 ├── docker-compose.yml  PostgreSQL + Mailpit
