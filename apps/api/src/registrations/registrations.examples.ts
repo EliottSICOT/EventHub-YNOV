@@ -1,0 +1,31 @@
+import { AUTH_MESSAGES } from '../auth/auth.constants.js';
+import type { ApiErrorDto } from '../common/errors/api-error.dto.js';
+import { EVENT_NOT_FOUND_MESSAGE } from '../events/events.service.js';
+import type { RegistrationDto } from './dto/registration.dto.js';
+import { REGISTRATION_MESSAGES } from './registrations.constants.js';
+
+/** Exemples du contrat OpenAPI pour `POST /events/{id}/registrations`. */
+
+const EVENT_ID = '3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11';
+const PATH = `/api/v1/events/${EVENT_ID}/registrations`;
+const TIMESTAMP = '2026-11-20T10:33:21.774Z';
+
+function error(statusCode: number, label: string, message: string): ApiErrorDto {
+  return { statusCode, error: label, message, path: PATH, timestamp: TIMESTAMP };
+}
+
+export const registrationExample: RegistrationDto = {
+  id: '9b1d2c3e-4f5a-4b6c-8d7e-0a1b2c3d4e5f',
+  eventId: EVENT_ID,
+  createdAt: TIMESTAMP,
+  remainingSeats: 41,
+  isFull: false,
+};
+
+export const unauthenticatedExample = error(401, 'Unauthorized', AUTH_MESSAGES.unauthenticated);
+export const eventNotFoundExample = error(404, 'Not Found', EVENT_NOT_FOUND_MESSAGE);
+export const alreadyRegisteredExample = error(
+  409,
+  'Conflict',
+  REGISTRATION_MESSAGES.alreadyRegistered,
+);
