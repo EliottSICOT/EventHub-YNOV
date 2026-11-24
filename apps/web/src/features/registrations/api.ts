@@ -2,14 +2,28 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError, unwrap } from '../../api/client';
 import { queryKeys } from '../../api/queries';
 import type { ApiErrorBody, EventDetail } from '../../api/types';
+import { meQueryKey, useMe } from '../auth/api';
 
+/** Préfixe commun : invalider cette clé recharge la liste, quel que soit l'utilisateur. */
 export const myRegistrationsKey = ['registrations', 'me'] as const;
 
-/** Inscriptions de l'utilisateur connecté, passées comprises (US06). */
+/**
+ * Inscriptions de l'utilisateur connecté, passées comprises (US06, US07).
+ * La clé porte l'identifiant de l'utilisateur : après un changement de compte,
+ * le cache du précédent n'est jamais affiché.
+ */
 export function useMyRegistrations() {
+  const queryClient = useQueryClient();
+  const { data: user } = useMe();
   return useQuery({
-    queryKey: myRegistrationsKey,
-    queryFn: async ({ signal }) => unwrap(await api.GET('/api/v1/registrations/me', { signal })),
+    queryKey: [...myRegistrationsKey, user?.id],
+    enabled: Boolean(user),
+    queryFn: async ({ signal }) => {
+      const result = await api.GET('/api/v1/registrations/me', { signal });
+      // Session expirée : oublier l'utilisateur, `RequireAuth` renvoie alors vers la connexion.
+      if (result.response.status === 401) queryClient.setQueryData(meQueryKey, null);
+      return unwrap(result);
+    },
   });
 }
 

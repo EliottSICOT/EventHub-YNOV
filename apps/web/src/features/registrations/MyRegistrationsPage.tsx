@@ -19,7 +19,7 @@ function cancelErrorMessage(error: unknown): string {
   return "L'annulation a échoué. Réessayez dans un instant.";
 }
 
-/** Écran « Mes inscriptions » (US06) : annulation avec confirmation des inscriptions à venir. */
+/** Écran « Mes inscriptions » (US06, US07) : annulation avec confirmation des inscriptions à venir. */
 export function MyRegistrationsPage() {
   const { data, isPending, isError, refetch } = useMyRegistrations();
   const cancel = useCancelRegistration();
