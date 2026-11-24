@@ -161,6 +161,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/registrations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mes inscriptions
+         * @description US07 : inscriptions de l'utilisateur connecté, à venir et passées séparées. Un événement est passé dès qu'il a commencé, comme pour l'inscription.
+         */
+        get: operations["listMyRegistrations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -360,6 +380,25 @@ export interface components {
             remainingSeats: number;
             /** @description Vrai quand il ne reste plus aucune place */
             isFull: boolean;
+        };
+        MyRegistrationDto: {
+            /**
+             * Format: uuid
+             * @description Identifiant de l'inscription
+             */
+            id: string;
+            /**
+             * Format: date-time
+             * @description Date de l'inscription
+             */
+            createdAt: string;
+            event: components["schemas"]["EventSummaryDto"];
+        };
+        MyRegistrationsDto: {
+            /** @description Événements qui n'ont pas commencé, du plus proche au plus lointain */
+            upcoming: components["schemas"]["MyRegistrationDto"][];
+            /** @description Événements commencés ou terminés, du plus récent au plus ancien */
+            past: components["schemas"]["MyRegistrationDto"][];
         };
     };
     responses: never;
@@ -757,6 +796,72 @@ export interface operations {
                      *       "error": "Conflict",
                      *       "message": "Vous êtes déjà inscrit à cet événement",
                      *       "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11/registrations",
+                     *       "timestamp": "2026-11-20T10:33:21.774Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    listMyRegistrations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "upcoming": [
+                     *         {
+                     *           "id": "9b1d2c3e-4f5a-4b6c-8d7e-0a1b2c3d4e5f",
+                     *           "createdAt": "2026-11-20T10:33:21.774Z",
+                     *           "event": {
+                     *             "id": "3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11",
+                     *             "title": "Nuit du jazz",
+                     *             "startsAt": "2026-12-05T19:00:00.000Z",
+                     *             "endsAt": "2026-12-05T22:00:00.000Z",
+                     *             "venue": "Le Transbordeur",
+                     *             "city": "Lyon",
+                     *             "capacity": 300,
+                     *             "priceCents": 1500,
+                     *             "remainingSeats": 41,
+                     *             "isFull": false,
+                     *             "imageUrl": null,
+                     *             "category": {
+                     *               "id": "5c2f8a10-7d3b-4e6f-8a91-2b3c4d5e6f70",
+                     *               "name": "Concert",
+                     *               "slug": "concert"
+                     *             }
+                     *           }
+                     *         }
+                     *       ],
+                     *       "past": []
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MyRegistrationsDto"];
+                };
+            };
+            /** @description Pas de session, ou session expirée */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "statusCode": 401,
+                     *       "error": "Unauthorized",
+                     *       "message": "Authentification requise",
+                     *       "path": "/api/v1/me/registrations",
                      *       "timestamp": "2026-11-20T10:33:21.774Z"
                      *     }
                      */

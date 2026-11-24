@@ -1,14 +1,35 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { remainingSeats } from '../events/events.mapper.js';
+import { eventSummaryInclude, remainingSeats, toEventSummary } from '../events/events.mapper.js';
 import { EVENT_NOT_FOUND_MESSAGE } from '../events/events.service.js';
 import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import type { MyRegistrationDto, MyRegistrationsDto } from './dto/my-registrations.dto.js';
 import type { RegistrationDto } from './dto/registration.dto.js';
 import { REGISTRATION_MESSAGES } from './registrations.constants.js';
 
 @Injectable()
 export class RegistrationsService {
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Inscriptions de `userId`, à venir et passées séparées (US07).
+   * Même frontière que `register` : un événement est passé dès qu'il a commencé.
+   */
+  async findByUser(userId: string, now: Date = new Date()): Promise<MyRegistrationsDto> {
+    const registrations = await this.prisma.registration.findMany({
+      where: { userId },
+      include: { event: { include: eventSummaryInclude } },
+      orderBy: [{ event: { startsAt: 'asc' } }, { id: 'asc' }],
+    });
+
+    const upcoming: MyRegistrationDto[] = [];
+    const past: MyRegistrationDto[] = [];
+    for (const { id, createdAt, event } of registrations) {
+      const target = event.startsAt > now ? upcoming : past;
+      target.push({ id, createdAt: createdAt.toISOString(), event: toEventSummary(event) });
+    }
+    return { upcoming, past: past.reverse() };
+  }
 
   /**
    * Inscrit `userId` à l'événement `eventId` (US05).
