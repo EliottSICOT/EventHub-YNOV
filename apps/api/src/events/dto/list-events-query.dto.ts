@@ -65,7 +65,7 @@ export class ListEventsQueryDto {
 
   @ApiPropertyOptional({
     description:
-      "Début de la période (date `YYYY-MM-DD` ou date-heure ISO 8601). Par défaut : maintenant, le catalogue n'affiche donc que les événements à venir.",
+      "Début de la période (date `YYYY-MM-DD` ou date-heure ISO 8601). Par défaut : maintenant. Une date passée est ramenée à maintenant : le catalogue n'affiche jamais d'événement passé.",
     example: '2026-12-01',
   })
   @IsOptional()
