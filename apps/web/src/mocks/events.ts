@@ -1,14 +1,16 @@
 import type { EventDetail } from '../api/types';
 
 /**
- * Événements créés pendant la session simulée (US08), en plus des fixtures.
- * En mémoire ; remis à zéro entre chaque test.
+ * Événements créés pendant la session simulée (US08), en plus des fixtures, et modifications
+ * apportées aux uns comme aux autres (US09). En mémoire ; remis à zéro entre chaque test.
  */
 class MockEventStore {
   private created: EventDetail[] = [];
+  private changes = new Map<string, Partial<EventDetail>>();
 
   reset() {
     this.created = [];
+    this.changes.clear();
   }
 
   all(): readonly EventDetail[] {
@@ -19,11 +21,14 @@ class MockEventStore {
     this.created.push(event);
   }
 
-  update(id: string, changes: Partial<EventDetail>): EventDetail | undefined {
-    const index = this.created.findIndex((e) => e.id === id);
-    if (index === -1) return undefined;
-    this.created[index] = { ...this.created[index], ...changes };
-    return this.created[index];
+  /** Modifie un événement, qu'il vienne des fixtures ou de la session. */
+  update(event: EventDetail, changes: Partial<EventDetail>): EventDetail {
+    this.changes.set(event.id, { ...this.changes.get(event.id), ...changes });
+    return this.withChanges(event);
+  }
+
+  withChanges(event: EventDetail): EventDetail {
+    return { ...event, ...this.changes.get(event.id) };
   }
 }
 
