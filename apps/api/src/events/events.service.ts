@@ -9,6 +9,7 @@ import type { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { CreateEventDto } from './dto/create-event.dto.js';
 import type { EventDetailDto } from './dto/event-detail.dto.js';
+import type { EventSummaryDto } from './dto/event-summary.dto.js';
 import type { ListEventsQueryDto } from './dto/list-events-query.dto.js';
 import type { PaginatedEventsDto } from './dto/paginated-events.dto.js';
 import type { UpdateEventDto } from './dto/update-event.dto.js';
@@ -19,9 +20,7 @@ import {
   toEventDetail,
   toEventSummary,
 } from './events.mapper.js';
-
-const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
-const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+import { catalogueCountSql, cataloguePageSql } from './events.search.js';
 
 export const EVENT_NOT_FOUND_MESSAGE = "L'événement demandé n'existe pas";
 export const CATEGORY_NOT_FOUND_MESSAGE = "La catégorie choisie n'existe pas";
@@ -32,21 +31,14 @@ export class EventsService {
 
   async findAll(query: ListEventsQueryDto, now: Date = new Date()): Promise<PaginatedEventsDto> {
     const { page, pageSize } = query;
-    const where = buildEventsWhere(query, now);
-
-    const [events, total] = await this.prisma.$transaction([
-      this.prisma.event.findMany({
-        where,
-        include: eventSummaryInclude,
-        orderBy: [{ startsAt: 'asc' }, { id: 'asc' }],
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-      }),
-      this.prisma.event.count({ where }),
+    const [ids, [{ total }]] = await this.prisma.$transaction([
+      this.prisma.$queryRaw<{ id: string }[]>(cataloguePageSql(query, now)),
+      this.prisma.$queryRaw<{ total: number }[]>(catalogueCountSql(query, now)),
     ]);
+    const events = await this.findSummaries(ids.map(({ id }) => id));
 
     return {
-      data: events.map(toEventSummary),
+      data: events,
       meta: {
         page,
         pageSize,
@@ -54,6 +46,16 @@ export class EventsService {
         totalPages: Math.ceil(total / pageSize),
       },
     };
+  }
+
+  /** Résumés des événements `ids`, dans cet ordre. */
+  private async findSummaries(ids: string[]): Promise<EventSummaryDto[]> {
+    const events = await this.prisma.event.findMany({
+      where: { id: { in: ids } },
+      include: eventSummaryInclude,
+    });
+    const byId = new Map(events.map((event) => [event.id, toEventSummary(event)]));
+    return ids.flatMap((id) => byId.get(id) ?? []);
   }
 
   async findOne(id: string): Promise<EventDetailDto> {
@@ -168,34 +170,4 @@ async function lockManageableEvent(
   }
   if (event.cancelled_at) throw new ConflictException(MANAGE_EVENT_MESSAGES.alreadyCancelled);
   if (event.starts_at <= now) throw new ConflictException(MANAGE_EVENT_MESSAGES.past);
-}
-
-/** Traduit les filtres du catalogue en clause Prisma. */
-export function buildEventsWhere(
-  query: Pick<ListEventsQueryDto, 'from' | 'to' | 'category' | 'city'>,
-  now: Date,
-): Prisma.EventWhereInput {
-  // Le catalogue n'affiche jamais d'événement passé : un `from` antérieur à maintenant est ignoré.
-  const from = query.from ? new Date(query.from) : now;
-  const startsAt: Prisma.DateTimeFilter = {
-    gte: from.getTime() > now.getTime() ? from : now,
-  };
-  if (query.to) {
-    if (DATE_ONLY.test(query.to)) {
-      // Une date seule (YYYY-MM-DD) inclut toute la journée.
-      startsAt.lt = new Date(new Date(query.to).getTime() + ONE_DAY_MS);
-    } else {
-      startsAt.lte = new Date(query.to);
-    }
-  }
-
-  return {
-    startsAt,
-    // Un événement supprimé par son organisateur (US09) sort du catalogue.
-    cancelledAt: null,
-    ...(query.category && { category: { slug: query.category } }),
-    ...(query.city && {
-      city: { contains: query.city, mode: 'insensitive' as const },
-    }),
-  };
 }
