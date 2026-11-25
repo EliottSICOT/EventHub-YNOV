@@ -20,6 +20,13 @@ import {
 } from './eventForm';
 import { FileField, SelectField, TextAreaField } from './fields';
 
+const CREATE_LABELS = {
+  form: 'Créer un événement',
+  submit: "Créer l'événement",
+  submitting: 'Création en cours…',
+  image: 'JPG ou PNG, 2 Mo maximum',
+};
+
 interface CreateEventFormProps {
   /** Catégories proposées ; `undefined` pendant le chargement. */
   categories: Category[] | undefined;
@@ -27,17 +34,23 @@ interface CreateEventFormProps {
   submitting?: boolean;
   /** Erreurs renvoyées par l'API (400 champ par champ, 403, erreur réseau…). */
   serverErrors?: FormErrors<EventField>;
+  /** Valeurs de départ, pour modifier un événement existant (US09). */
+  initialValues?: EventFormValues;
+  /** Libellés, ceux de la création par défaut. */
+  labels?: typeof CREATE_LABELS;
 }
 
-/** Formulaire de création d'un événement (US08) : validé côté Front avant l'envoi. */
+/** Formulaire de création (US08) ou de modification (US09) d'un événement : validé côté Front avant l'envoi. */
 export function CreateEventForm({
   categories,
   onSubmit,
   submitting = false,
   serverErrors,
+  initialValues = EMPTY_EVENT_FORM,
+  labels = CREATE_LABELS,
 }: CreateEventFormProps) {
   const id = useId();
-  const [values, setValues] = useState<EventFormValues>(EMPTY_EVENT_FORM);
+  const [values, setValues] = useState<EventFormValues>(initialValues);
   const [image, setImage] = useState<File | null>(null);
   // Borne `min` du début : l'heure d'ouverture du formulaire (la validation recontrôle à l'envoi).
   const [minStart] = useState(() => toLocalDateTimeInput(new Date()));
@@ -76,7 +89,7 @@ export function CreateEventForm({
   });
 
   return (
-    <form className="form" onSubmit={submit} noValidate aria-label="Créer un événement">
+    <form className="form" onSubmit={submit} noValidate aria-label={labels.form}>
       {errors.form && (
         <p ref={formAlertRef} className="form__alert" role="alert" tabIndex={-1}>
           {errors.form}
@@ -188,12 +201,12 @@ export function CreateEventForm({
         {...field('image')}
         label="Image (facultatif)"
         accept={IMAGE_TYPES.join(',')}
-        hint="JPG ou PNG, 2 Mo maximum"
+        hint={labels.image}
         onChange={changeImage}
       />
 
       <button type="submit" className="button form__submit" disabled={submitting}>
-        {submitting ? 'Création en cours…' : "Créer l'événement"}
+        {submitting ? labels.submitting : labels.submit}
       </button>
     </form>
   );

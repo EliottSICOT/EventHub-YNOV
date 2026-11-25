@@ -138,12 +138,16 @@ function RegistrationGroup({ title, registrations, onCancel }: RegistrationGroup
                 </p>
               </div>
               <div className="registration__side">
-                <SeatsBadge
-                  remainingSeats={event.remainingSeats}
-                  capacity={event.capacity}
-                  isFull={event.isFull}
-                />
-                {onCancel ? (
+                {event.isCancelled ? (
+                  <span className="badge badge--full">Événement annulé</span>
+                ) : (
+                  <SeatsBadge
+                    remainingSeats={event.remainingSeats}
+                    capacity={event.capacity}
+                    isFull={event.isFull}
+                  />
+                )}
+                {event.isCancelled ? null : onCancel ? (
                   <button
                     type="button"
                     className="button button--ghost button--small"

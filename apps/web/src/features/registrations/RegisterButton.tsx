@@ -6,7 +6,7 @@ import { useMe } from '../auth/api';
 import { useRegister } from './api';
 
 interface RegisterButtonProps {
-  event: Pick<EventDetail, 'id' | 'title' | 'startsAt' | 'isFull'>;
+  event: Pick<EventDetail, 'id' | 'title' | 'startsAt' | 'isFull' | 'isCancelled'>;
   /** Instant de référence pour savoir si l'événement est passé (injectable pour les tests). */
   now?: number;
 }
@@ -23,13 +23,21 @@ function errorMessage(error: unknown): string {
 
 /**
  * Action « S'inscrire » du détail d'un événement (US05), avec ses états :
- * visiteur (renvoyé vers la connexion), prêt, en cours, inscrit, complet, terminé, erreur.
+ * visiteur (renvoyé vers la connexion), prêt, en cours, inscrit, annulé, complet, terminé, erreur.
  */
 export function RegisterButton({ event, now: nowProp }: RegisterButtonProps) {
   const [now] = useState(() => nowProp ?? Date.now());
   const { data: user, isPending: sessionPending } = useMe();
   const location = useLocation();
   const register = useRegister(event.id);
+
+  if (event.isCancelled) {
+    return (
+      <button type="button" className="button" disabled>
+        Événement annulé
+      </button>
+    );
+  }
 
   if (register.isSuccess) {
     return (
