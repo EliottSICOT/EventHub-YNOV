@@ -86,22 +86,22 @@ Toutes les erreurs suivent `ApiErrorDto` :
 
 ## Endpoints
 
-| Méthode | Chemin                              | Story      | Description                                                                                                                                                                |
-| ------- | ----------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| GET     | `/api/v1/events`                    | US01, US02 | Catalogue paginé (`page`, `pageSize` ≤ 50), filtres combinables `from`, `to`, `category`, `city`                                                                           |
-| GET     | `/api/v1/events/{id}`               | US03       | Détail : description, organisateur, places restantes ; 404 si inconnu                                                                                                      |
-| GET     | `/api/v1/categories`                | US02       | Catégories pour le filtre                                                                                                                                                  |
-| POST    | `/api/v1/events`                    | US08       | Création d'un événement par un organisateur (JSON) ; 201 avec le détail, 400 avec `details`, 401, 403 pour un participant                                                  |
-| POST    | `/api/v1/events/{id}/image`         | US08       | Image de l'événement (multipart, champ `image`, JPG ou PNG, 2 Mo maximum) ; 200, 400, 401, 403 (pas l'organisateur), 404                                                   |
-| PUT     | `/api/v1/events/{id}`               | US09       | Modification par l'organisateur de l'événement, mêmes validations que la création ; 400 (dont capacité sous le nombre d'inscrits), 401, 403, 404, 409 (annulé ou commencé) |
-| DELETE  | `/api/v1/events/{id}`               | US09       | Suppression par l'organisateur de l'événement ; 204, 401, 403, 404, 409 (déjà annulé ou commencé)                                                                          |
-| POST    | `/api/v1/auth/sign-up`              | US04       | Création d'un compte participant ; 400 avec `details`, 409 si l'email est pris                                                                                             |
-| POST    | `/api/v1/auth/sign-in`              | US04       | Connexion : pose le cookie de session ; 401 générique si les identifiants sont faux                                                                                        |
-| POST    | `/api/v1/auth/sign-out`             | US04       | Déconnexion : supprime la session en base et efface le cookie ; 204                                                                                                        |
-| GET     | `/api/v1/auth/me`                   | US04       | Utilisateur connecté (id, email, prénom, nom, rôle) ; 401 sans session                                                                                                     |
-| POST    | `/api/v1/events/{id}/registrations` | US05, US11 | Inscription de l'utilisateur connecté, en transaction ; 201 avec les places restantes, 401, 404, 409 (déjà inscrit, complet ou passé)                                      |
-| GET     | `/api/v1/registrations/me`          | US06, US07 | Mes inscriptions (passées comprises), triées par date d'événement ; 401 sans session                                                                                       |
-| DELETE  | `/api/v1/registrations/{id}`        | US06       | Annulation d'une inscription, la place est libérée ; 204, 401, 403 (pas la mienne), 404, 409 (événement passé)                                                             |
+| Méthode | Chemin                              | Story            | Description                                                                                                                                                                |
+| ------- | ----------------------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET     | `/api/v1/events`                    | US01, US02, US10 | Catalogue paginé (`page`, `pageSize` ≤ 50), filtres combinables `from`, `to`, `category`, `city`, recherche `q` et tri `sort`                                              |
+| GET     | `/api/v1/events/{id}`               | US03             | Détail : description, organisateur, places restantes ; 404 si inconnu                                                                                                      |
+| GET     | `/api/v1/categories`                | US02             | Catégories pour le filtre                                                                                                                                                  |
+| POST    | `/api/v1/events`                    | US08             | Création d'un événement par un organisateur (JSON) ; 201 avec le détail, 400 avec `details`, 401, 403 pour un participant                                                  |
+| POST    | `/api/v1/events/{id}/image`         | US08             | Image de l'événement (multipart, champ `image`, JPG ou PNG, 2 Mo maximum) ; 200, 400, 401, 403 (pas l'organisateur), 404                                                   |
+| PUT     | `/api/v1/events/{id}`               | US09             | Modification par l'organisateur de l'événement, mêmes validations que la création ; 400 (dont capacité sous le nombre d'inscrits), 401, 403, 404, 409 (annulé ou commencé) |
+| DELETE  | `/api/v1/events/{id}`               | US09             | Suppression par l'organisateur de l'événement ; 204, 401, 403, 404, 409 (déjà annulé ou commencé)                                                                          |
+| POST    | `/api/v1/auth/sign-up`              | US04             | Création d'un compte participant ; 400 avec `details`, 409 si l'email est pris                                                                                             |
+| POST    | `/api/v1/auth/sign-in`              | US04             | Connexion : pose le cookie de session ; 401 générique si les identifiants sont faux                                                                                        |
+| POST    | `/api/v1/auth/sign-out`             | US04             | Déconnexion : supprime la session en base et efface le cookie ; 204                                                                                                        |
+| GET     | `/api/v1/auth/me`                   | US04             | Utilisateur connecté (id, email, prénom, nom, rôle) ; 401 sans session                                                                                                     |
+| POST    | `/api/v1/events/{id}/registrations` | US05, US11       | Inscription de l'utilisateur connecté, en transaction ; 201 avec les places restantes, 401, 404, 409 (déjà inscrit, complet ou passé)                                      |
+| GET     | `/api/v1/registrations/me`          | US06, US07       | Mes inscriptions (passées comprises), triées par date d'événement ; 401 sans session                                                                                       |
+| DELETE  | `/api/v1/registrations/{id}`        | US06             | Annulation d'une inscription, la place est libérée ; 204, 401, 403 (pas la mienne), 404, 409 (événement passé)                                                             |
 
 Le catalogue n'affiche jamais d'événement passé : sans `from`, il part de maintenant, et un `from` dans le passé est ramené à maintenant. Une date seule dans `to` inclut toute la journée. Côté Front, le champ « Du » n'accepte pas de date passée, et une page au-delà de la dernière (`?page=99`) est remplacée par la dernière page existante.
 
@@ -129,6 +129,12 @@ Les images sont écrites dans `UPLOADS_DIR` (par défaut `apps/api/uploads`, ign
 - `DELETE /registrations/{id}` supprime l'inscription de son propriétaire uniquement (403 sinon) et refuse les événements passés (409) : les places restantes se déduisent des inscriptions, la place est donc libérée sans autre écriture.
 - La contrainte unique `(event_id, user_id)` garantit une seule inscription par utilisateur ; les refus (déjà inscrit, complet, passé) renvoient 409 avec un message distinct.
 - E-mail de confirmation (US11) : envoyé après la validation de la transaction, sans retarder la réponse. Un échec est journalisé (sans l'adresse du participant) et l'inscription reste valide.
+
+### Recherche et tri du catalogue
+
+- `q` : tous les mots saisis doivent se trouver dans le titre ou la description, sans tenir compte des majuscules ni des accents. Le début d'un mot suffit (« jaz » trouve « jazz », pas « azz »).
+- `sort` : `date` (par défaut), `price` ou `seats` (places restantes), croissant ; `-date`, `-price` ou `-seats` pour l'ordre décroissant.
+- Recherche plein texte de PostgreSQL : extension `unaccent`, configuration `eventhub_search` et index GIN `events_search_idx`, créés par la migration `add_event_search`. L'expression de l'index est répétée dans `events.search.ts` : les deux doivent rester identiques.
 
 ### Modification et suppression d'un événement
 
@@ -164,11 +170,11 @@ Les tests e2e créent la base `eventhub_test` si besoin et refusent de tourner s
 
 ## Avancement
 
-| Sprint | Stories              | État                   |
-| ------ | -------------------- | ---------------------- |
-| 1      | US01, US02, US03     | Livré                  |
-| 2      | US04, US05           | Livré                  |
-| 3      | US06 à US09          | Livré                  |
-| 4      | US10 à US13 (+ US14) | En cours : US11 livrée |
+| Sprint | Stories              | État                            |
+| ------ | -------------------- | ------------------------------- |
+| 1      | US01, US02, US03     | Livré                           |
+| 2      | US04, US05           | Livré                           |
+| 3      | US06 à US09          | Livré                           |
+| 4      | US10 à US13 (+ US14) | En cours : US10 et US11 livrées |
 
 Le schéma Prisma contient déjà `users` et `registrations` : les places restantes se calculent à partir des inscriptions.

@@ -93,7 +93,7 @@ export interface paths {
         };
         /**
          * Catalogue paginé des événements
-         * @description US01 et US02 : liste triée par date de début croissante, filtrable par période, catégorie et ville. Les filtres se combinent.
+         * @description US01, US02 et US10 : liste filtrable par période, catégorie et ville, avec recherche par mots et tri (par date croissante par défaut). Tout se combine.
          */
         get: operations["listEvents"];
         put?: never;
@@ -765,6 +765,10 @@ export interface operations {
                 category?: string;
                 /** @description Ville (recherche partielle, insensible à la casse) */
                 city?: string;
+                /** @description Mots à trouver dans le titre ou la description, tous requis, sans tenir compte des majuscules ni des accents. Le début d’un mot suffit. */
+                q?: string;
+                /** @description Tri par date, prix ou places restantes (`seats`), croissant ; le signe `-` donne l’ordre décroissant. */
+                sort?: "date" | "-date" | "price" | "-price" | "seats" | "-seats";
             };
             header?: never;
             path?: never;

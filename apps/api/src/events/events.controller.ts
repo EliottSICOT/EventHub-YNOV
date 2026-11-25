@@ -82,7 +82,7 @@ export class EventsController {
   @ApiOperation({
     summary: 'Catalogue paginé des événements',
     description:
-      'US01 et US02 : liste triée par date de début croissante, filtrable par période, catégorie et ville. Les filtres se combinent.',
+      'US01, US02 et US10 : liste filtrable par période, catégorie et ville, avec recherche par mots et tri (par date croissante par défaut). Tout se combine.',
   })
   @ApiOkResponse({ type: PaginatedEventsDto })
   @ApiBadRequestResponse({

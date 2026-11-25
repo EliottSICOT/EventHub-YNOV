@@ -1,6 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
+  IsIn,
   IsInt,
   IsISO8601,
   IsOptional,
@@ -15,6 +16,11 @@ import {
 
 export const DEFAULT_PAGE_SIZE = 12;
 export const MAX_PAGE_SIZE = 50;
+export const SEARCH_MAX_LENGTH = 100;
+
+/** Tris du catalogue (US10) ; le signe « - » inverse l'ordre. Le premier est celui par défaut. */
+export const EVENT_SORTS = ['date', '-date', 'price', '-price', 'seats', '-seats'] as const;
+export type EventSort = (typeof EVENT_SORTS)[number];
 
 const trim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() || undefined : value;
@@ -101,4 +107,28 @@ export class ListEventsQueryDto {
   @IsString()
   @MaxLength(100, { message: 'city ne doit pas dépasser 100 caractères' })
   city?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Mots à trouver dans le titre ou la description, tous requis, sans tenir compte des majuscules ni des accents. Le début d’un mot suffit.',
+    example: 'soirée jazz',
+    maxLength: SEARCH_MAX_LENGTH,
+  })
+  @IsOptional()
+  @Transform(trim)
+  @IsString({ message: 'q doit être une chaîne de caractères' })
+  @MaxLength(SEARCH_MAX_LENGTH, {
+    message: `q ne doit pas dépasser ${SEARCH_MAX_LENGTH} caractères`,
+  })
+  q?: string;
+
+  @ApiPropertyOptional({
+    enum: EVENT_SORTS,
+    default: EVENT_SORTS[0],
+    description:
+      'Tri par date, prix ou places restantes (`seats`), croissant ; le signe `-` donne l’ordre décroissant.',
+  })
+  @IsOptional()
+  @IsIn(EVENT_SORTS, { message: `sort doit valoir ${EVENT_SORTS.join(', ')}` })
+  sort?: EventSort;
 }

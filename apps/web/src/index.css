@@ -303,6 +303,10 @@ a.button {
 .filters__field--grow {
   flex: 1 1 180px;
 }
+/* Recherche et tri sur la première ligne, filtres sur la suivante. */
+.filters__field--search {
+  flex: 1 1 60%;
+}
 .filters label {
   font-size: 0.8rem;
   font-weight: 600;
