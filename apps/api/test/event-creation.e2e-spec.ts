@@ -124,6 +124,7 @@ describe("Création d'un événement par un organisateur (e2e, US08)", () => {
         priceCents: 1500,
         remainingSeats: 300,
         isFull: false,
+        isCancelled: false,
         imageUrl: null,
         category: { id: categoryId, name: 'Concert', slug: 'concert' },
         organizer: { id: me.body.id, name: 'Camille Martin' },

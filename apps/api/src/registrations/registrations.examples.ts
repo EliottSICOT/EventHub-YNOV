@@ -54,6 +54,7 @@ export const userRegistrationsExample: UserRegistrationDto[] = [
       priceCents: 1500,
       remainingSeats: 41,
       isFull: false,
+      isCancelled: false,
       imageUrl: null,
       category: { id: '5d1f0c52-6a3e-4b8e-9a43-0d7f1e2b9c22', name: 'Concert', slug: 'concert' },
     },

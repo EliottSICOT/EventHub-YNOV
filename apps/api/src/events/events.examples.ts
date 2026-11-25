@@ -4,13 +4,15 @@ import { VALIDATION_MESSAGE } from '../common/errors/validation.exception.js';
 import type { CreateEventDto } from './dto/create-event.dto.js';
 import type { EventDetailDto } from './dto/event-detail.dto.js';
 import { IMAGE_MESSAGES } from './event-image.js';
+import { MANAGE_EVENT_MESSAGES } from './events.constants.js';
 import { CATEGORY_NOT_FOUND_MESSAGE, EVENT_NOT_FOUND_MESSAGE } from './events.service.js';
 
-/** Exemples du contrat OpenAPI de la création d'un événement (US08). */
+/** Exemples du contrat OpenAPI de la gestion d'un événement (US08, US09). */
 
 const EVENT_ID = '3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11';
 const CATEGORY_ID = '5d1f0c52-6a3e-4b8e-9a43-0d7f1e2b9c22';
 const CREATE_PATH = '/api/v1/events';
+const EVENT_PATH = `/api/v1/events/${EVENT_ID}`;
 const IMAGE_PATH = `/api/v1/events/${EVENT_ID}/image`;
 const TIMESTAMP = '2026-11-20T10:33:21.774Z';
 
@@ -43,6 +45,7 @@ function eventDetail(imageUrl: string | null): EventDetailDto {
     priceCents: 1500,
     remainingSeats: 300,
     isFull: false,
+    isCancelled: false,
     imageUrl,
     category: { id: CATEGORY_ID, name: 'Concert', slug: 'concert' },
     organizer: { id: '0d6a1b52-1b0e-4b8e-9a43-0d7f1e2b9c02', name: 'Camille Martin' },
@@ -105,3 +108,27 @@ export const imageForbiddenExample = error(
   IMAGE_PATH,
 );
 export const imageNotFoundExample = error(404, 'Not Found', EVENT_NOT_FOUND_MESSAGE, IMAGE_PATH);
+
+export const capacityTooLowExample = validationError(EVENT_PATH, [
+  { field: 'capacity', message: MANAGE_EVENT_MESSAGES.capacityBelowRegistrations(42) },
+]);
+export const manageUnauthenticatedExample = error(
+  401,
+  'Unauthorized',
+  AUTH_MESSAGES.unauthenticated,
+  EVENT_PATH,
+);
+export const manageForbiddenExample = error(
+  403,
+  'Forbidden',
+  MANAGE_EVENT_MESSAGES.notOrganizer,
+  EVENT_PATH,
+);
+export const manageNotFoundExample = error(404, 'Not Found', EVENT_NOT_FOUND_MESSAGE, EVENT_PATH);
+export const eventCancelledExample = error(
+  409,
+  'Conflict',
+  MANAGE_EVENT_MESSAGES.alreadyCancelled,
+  EVENT_PATH,
+);
+export const eventPastExample = error(409, 'Conflict', MANAGE_EVENT_MESSAGES.past, EVENT_PATH);

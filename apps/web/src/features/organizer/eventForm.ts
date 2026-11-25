@@ -1,8 +1,8 @@
-import type { CreateEventInput } from '../../api/types';
+import type { CreateEventInput, EventDetail } from '../../api/types';
 import type { FormErrors } from '../auth/validation';
 
 /**
- * Valeurs saisies dans le formulaire de création (US08), telles que les champs les donnent.
+ * Valeurs saisies dans le formulaire d'un événement (US08, US09), telles que les champs les donnent.
  * Les noms reprennent ceux de l'API (`CreateEventDto`) pour placer ses `details` sous le bon champ ;
  * `priceCents` est saisi en euros puis converti en centimes à l'envoi.
  */
@@ -161,7 +161,28 @@ export function validateEventForm(
   return { fields };
 }
 
-/** Corps de `POST /events`, à partir de valeurs déjà validées. */
+/** Centimes (1250) vers un montant en euros à afficher dans le formulaire (« 12,50 »). */
+export function centsToEuros(cents: number): string {
+  return cents % 100 === 0 ? String(cents / 100) : (cents / 100).toFixed(2).replace('.', ',');
+}
+
+/** Valeurs du formulaire à partir d'un événement existant (US09). */
+export function toEventFormValues(event: EventDetail): EventFormValues {
+  return {
+    title: event.title,
+    description: event.description,
+    categoryId: event.category.id,
+    startsAt: toLocalDateTimeInput(new Date(event.startsAt)),
+    endsAt: event.endsAt ? toLocalDateTimeInput(new Date(event.endsAt)) : '',
+    venue: event.venue,
+    address: event.address ?? '',
+    city: event.city,
+    priceCents: centsToEuros(event.priceCents),
+    capacity: String(event.capacity),
+  };
+}
+
+/** Corps de `POST /events` et de `PUT /events/{id}`, à partir de valeurs déjà validées. */
 export function toCreateEventInput(values: EventFormValues): CreateEventInput {
   const address = values.address.trim();
   const endsAt = values.endsAt ? localDateTimeToIso(values.endsAt) : null;

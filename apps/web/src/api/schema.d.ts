@@ -117,12 +117,20 @@ export interface paths {
         };
         /**
          * Détail d'un événement
-         * @description US03 : description, organisateur, date, lieu et places restantes.
+         * @description US03 : description, organisateur, date, lieu et places restantes. Un événement supprimé (US09) reste consultable, avec `isCancelled` à vrai.
          */
         get: operations["getEvent"];
-        put?: never;
+        /**
+         * Modifier un événement
+         * @description US09 : réservé à l'organisateur de l'événement, tant qu'il n'a pas commencé. Remplace tous les champs, avec les validations de la création ; un champ facultatif absent est effacé. La capacité ne peut pas passer sous le nombre d'inscrits.
+         */
+        put: operations["updateEvent"];
         post?: never;
-        delete?: never;
+        /**
+         * Supprimer un événement
+         * @description US09 : réservé à l'organisateur de l'événement, tant qu'il n'a pas commencé. L'événement sort du catalogue et n'accepte plus d'inscription ; les inscrits le voient « Événement annulé ».
+         */
+        delete: operations["deleteEvent"];
         options?: never;
         head?: never;
         patch?: never;
@@ -176,7 +184,7 @@ export interface paths {
         put?: never;
         /**
          * S'inscrire à un événement
-         * @description US05 : inscrit l'utilisateur connecté, dans une transaction qui verrouille l'événement : deux inscriptions simultanées ne peuvent pas dépasser la capacité. Une inscription est refusée (409) si l'utilisateur est déjà inscrit, si l'événement est complet ou s'il est passé. US11 : un e-mail de confirmation est envoyé ; un échec d'envoi n'annule pas l'inscription.
+         * @description US05 : inscrit l'utilisateur connecté, dans une transaction qui verrouille l'événement : deux inscriptions simultanées ne peuvent pas dépasser la capacité. Une inscription est refusée (409) si l'utilisateur est déjà inscrit, si l'événement est annulé, complet ou passé. US11 : un e-mail de confirmation est envoyé ; un échec d'envoi n'annule pas l'inscription.
          */
         post: operations["registerToEvent"];
         delete?: never;
@@ -194,7 +202,7 @@ export interface paths {
         };
         /**
          * Mes inscriptions
-         * @description US06 : inscriptions de l'utilisateur connecté, de l'événement le plus proche au plus lointain, passées comprises (l'annulation n'est possible que pour les événements à venir).
+         * @description US06 : inscriptions de l'utilisateur connecté, de l'événement le plus proche au plus lointain, passées comprises (l'annulation n'est possible que pour les événements à venir). Un événement supprimé par son organisateur reste listé, avec `isCancelled` à vrai.
          */
         get: operations["listMyRegistrations"];
         put?: never;
@@ -217,7 +225,7 @@ export interface paths {
         post?: never;
         /**
          * Annuler une inscription
-         * @description US06 : supprime l'inscription et libère la place (les places restantes augmentent de 1). Réservé au propriétaire de l'inscription (403 sinon) ; impossible pour un événement passé (409).
+         * @description US06 : supprime l'inscription et libère la place (les places restantes augmentent de 1). Réservé au propriétaire de l'inscription (403 sinon) ; impossible pour un événement annulé ou passé (409).
          */
         delete: operations["cancelRegistration"];
         options?: never;
@@ -345,6 +353,11 @@ export interface components {
             remainingSeats: number;
             /** @description Vrai si plus aucune place n’est disponible */
             isFull: boolean;
+            /**
+             * @description Vrai si l'organisateur a supprimé l'événement : absent du catalogue, inscriptions fermées
+             * @example false
+             */
+            isCancelled: boolean;
             /** @example null */
             imageUrl: string | null;
             category: components["schemas"]["CategoryDto"];
@@ -402,6 +415,11 @@ export interface components {
             remainingSeats: number;
             /** @description Vrai si plus aucune place n’est disponible */
             isFull: boolean;
+            /**
+             * @description Vrai si l'organisateur a supprimé l'événement : absent du catalogue, inscriptions fermées
+             * @example false
+             */
+            isCancelled: boolean;
             /** @example null */
             imageUrl: string | null;
             category: components["schemas"]["CategoryDto"];
@@ -411,6 +429,42 @@ export interface components {
             organizer: components["schemas"]["OrganizerDto"];
         };
         CreateEventDto: {
+            /** @example Nuit du jazz */
+            title: string;
+            /** @example Trois quartets lyonnais se succèdent sur la scène du Transbordeur. */
+            description: string;
+            /**
+             * @description Identifiant d’une catégorie existante (`GET /categories`)
+             * @example 5d1f0c52-6a3e-4b8e-9a43-0d7f1e2b9c22
+             */
+            categoryId: string;
+            /**
+             * Format: date-time
+             * @description Début de l’événement, dans le futur (date-heure ISO 8601).
+             * @example 2026-12-05T18:00:00.000Z
+             */
+            startsAt: string;
+            /**
+             * Format: date-time
+             * @description Fin de l’événement, facultative, postérieure au début.
+             * @example 2026-12-05T21:00:00.000Z
+             */
+            endsAt?: string;
+            /** @example Le Transbordeur */
+            venue: string;
+            /** @example 3 boulevard de Stalingrad */
+            address?: string;
+            /** @example Lyon */
+            city: string;
+            /** @example 300 */
+            capacity: number;
+            /**
+             * @description Prix en centimes d'euro, 0 pour un événement gratuit
+             * @example 1500
+             */
+            priceCents: number;
+        };
+        UpdateEventDto: {
             /** @example Nuit du jazz */
             title: string;
             /** @example Trois quartets lyonnais se succèdent sur la scène du Transbordeur. */
@@ -770,6 +824,7 @@ export interface operations {
                      *       "priceCents": 1500,
                      *       "remainingSeats": 300,
                      *       "isFull": false,
+                     *       "isCancelled": false,
                      *       "imageUrl": null,
                      *       "category": {
                      *         "id": "5d1f0c52-6a3e-4b8e-9a43-0d7f1e2b9c22",
@@ -863,6 +918,216 @@ export interface operations {
             };
         };
     };
+    updateEvent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identifiant de l'événement */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateEventDto"];
+            };
+        };
+        responses: {
+            /** @description Événement modifié */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11",
+                     *       "title": "Nuit du jazz",
+                     *       "description": "Trois quartets lyonnais se succèdent sur la scène du Transbordeur.",
+                     *       "startsAt": "2026-12-05T18:00:00.000Z",
+                     *       "endsAt": "2026-12-05T21:00:00.000Z",
+                     *       "venue": "Le Transbordeur",
+                     *       "address": "3 boulevard de Stalingrad",
+                     *       "city": "Lyon",
+                     *       "capacity": 300,
+                     *       "priceCents": 1500,
+                     *       "remainingSeats": 300,
+                     *       "isFull": false,
+                     *       "isCancelled": false,
+                     *       "imageUrl": null,
+                     *       "category": {
+                     *         "id": "5d1f0c52-6a3e-4b8e-9a43-0d7f1e2b9c22",
+                     *         "name": "Concert",
+                     *         "slug": "concert"
+                     *       },
+                     *       "organizer": {
+                     *         "id": "0d6a1b52-1b0e-4b8e-9a43-0d7f1e2b9c02",
+                     *         "name": "Camille Martin"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["EventDetailDto"];
+                };
+            };
+            /** @description Champs invalides, catégorie inconnue ou capacité trop basse */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Pas de session, ou session expirée */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "statusCode": 401,
+                     *       "error": "Unauthorized",
+                     *       "message": "Authentification requise",
+                     *       "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11",
+                     *       "timestamp": "2026-11-20T10:33:21.774Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description L'utilisateur connecté n'est pas l'organisateur de l'événement */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "statusCode": 403,
+                     *       "error": "Forbidden",
+                     *       "message": "Seul l'organisateur de l'événement peut le modifier ou le supprimer",
+                     *       "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11",
+                     *       "timestamp": "2026-11-20T10:33:21.774Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Événement inconnu */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "statusCode": 404,
+                     *       "error": "Not Found",
+                     *       "message": "L'événement demandé n'existe pas",
+                     *       "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11",
+                     *       "timestamp": "2026-11-20T10:33:21.774Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Événement annulé, ou déjà commencé */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    deleteEvent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identifiant de l'événement */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Événement supprimé */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Pas de session, ou session expirée */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "statusCode": 401,
+                     *       "error": "Unauthorized",
+                     *       "message": "Authentification requise",
+                     *       "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11",
+                     *       "timestamp": "2026-11-20T10:33:21.774Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description L'utilisateur connecté n'est pas l'organisateur de l'événement */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "statusCode": 403,
+                     *       "error": "Forbidden",
+                     *       "message": "Seul l'organisateur de l'événement peut le modifier ou le supprimer",
+                     *       "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11",
+                     *       "timestamp": "2026-11-20T10:33:21.774Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Événement inconnu */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "statusCode": 404,
+                     *       "error": "Not Found",
+                     *       "message": "L'événement demandé n'existe pas",
+                     *       "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11",
+                     *       "timestamp": "2026-11-20T10:33:21.774Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Événement annulé, ou déjà commencé */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     setEventImage: {
         parameters: {
             query?: never;
@@ -905,6 +1170,7 @@ export interface operations {
                      *       "priceCents": 1500,
                      *       "remainingSeats": 300,
                      *       "isFull": false,
+                     *       "isCancelled": false,
                      *       "imageUrl": "/uploads/7c9e6679-7425-40de-944b-e07fc1f90ae7.png",
                      *       "category": {
                      *         "id": "5d1f0c52-6a3e-4b8e-9a43-0d7f1e2b9c22",
@@ -1070,7 +1336,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
-            /** @description Déjà inscrit, événement complet ou événement passé */
+            /** @description Déjà inscrit, événement annulé, complet ou passé */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -1121,6 +1387,7 @@ export interface operations {
                      *           "priceCents": 1500,
                      *           "remainingSeats": 41,
                      *           "isFull": false,
+                     *           "isCancelled": false,
                      *           "imageUrl": null,
                      *           "category": {
                      *             "id": "5d1f0c52-6a3e-4b8e-9a43-0d7f1e2b9c22",
@@ -1227,7 +1494,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
-            /** @description Événement déjà passé */
+            /** @description Événement annulé ou déjà passé */
             409: {
                 headers: {
                     [name: string]: unknown;

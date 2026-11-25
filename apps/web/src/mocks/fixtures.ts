@@ -1,4 +1,5 @@
 import type { Category, EventDetail } from '../api/types';
+import { demoUsers } from './auth';
 
 /** Jeu de données des mocks : mêmes formes que les réponses de l'API (types générés depuis openapi.json). */
 export const categories: Category[] = [
@@ -10,7 +11,8 @@ export const categories: Category[] = [
 ];
 
 const organizers = [
-  { id: 'org-1', name: 'Camille Martin' },
+  // Le compte de démo organisateur : Camille peut gérer ses événements en dev:mock (US09).
+  { id: demoUsers[1].id, name: 'Camille Martin' },
   { id: 'org-2', name: 'Yanis Bernard' },
 ];
 
@@ -61,6 +63,7 @@ function buildEvent(index: number, now: number): EventDetail {
     priceCents: [0, 1200, 2500, 4500][index % 4],
     remainingSeats,
     isFull: remainingSeats === 0,
+    isCancelled: false,
     imageUrl: null,
     category,
     organizer: organizers[index % organizers.length],
