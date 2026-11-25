@@ -38,7 +38,7 @@ export class UserRegistrationsController {
   @ApiOperation({
     summary: 'Mes inscriptions',
     description:
-      "US06 : inscriptions de l'utilisateur connecté, de l'événement le plus proche au plus lointain, passées comprises (l'annulation n'est possible que pour les événements à venir).",
+      "US06 : inscriptions de l'utilisateur connecté, de l'événement le plus proche au plus lointain, passées comprises (l'annulation n'est possible que pour les événements à venir). Un événement supprimé par son organisateur reste listé, avec `isCancelled` à vrai.",
   })
   @ApiOkResponse({
     type: [UserRegistrationDto],
@@ -59,7 +59,7 @@ export class UserRegistrationsController {
   @ApiOperation({
     summary: 'Annuler une inscription',
     description:
-      "US06 : supprime l'inscription et libère la place (les places restantes augmentent de 1). Réservé au propriétaire de l'inscription (403 sinon) ; impossible pour un événement passé (409).",
+      "US06 : supprime l'inscription et libère la place (les places restantes augmentent de 1). Réservé au propriétaire de l'inscription (403 sinon) ; impossible pour un événement annulé ou passé (409).",
   })
   @ApiParam({ name: 'id', description: "Identifiant de l'inscription" })
   @ApiNoContentResponse({ description: 'Inscription annulée' })
@@ -80,7 +80,7 @@ export class UserRegistrationsController {
   })
   @ApiConflictResponse({
     type: ApiErrorDto,
-    description: 'Événement déjà passé',
+    description: 'Événement annulé ou déjà passé',
     example: cancelPastExample,
   })
   cancelRegistration(@Param('id') id: string, @CurrentUser() user: UserDto): Promise<void> {

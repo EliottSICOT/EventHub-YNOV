@@ -11,7 +11,10 @@ const NOW = new Date('2026-11-20T10:00:00.000Z');
 
 describe('buildEventsWhere', () => {
   it('ne retourne que les événements à venir par défaut', () => {
-    expect(buildEventsWhere({}, NOW)).toEqual({ startsAt: { gte: NOW } });
+    expect(buildEventsWhere({}, NOW)).toEqual({
+      startsAt: { gte: NOW },
+      cancelledAt: null,
+    });
   });
 
   it('ramène un `from` passé à maintenant (#46)', () => {
@@ -47,6 +50,7 @@ describe('buildEventsWhere', () => {
   it('combine catégorie et ville', () => {
     expect(buildEventsWhere({ category: 'concert', city: 'lyon' }, NOW)).toEqual({
       startsAt: { gte: NOW },
+      cancelledAt: null,
       category: { slug: 'concert' },
       city: { contains: 'lyon', mode: 'insensitive' },
     });

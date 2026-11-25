@@ -39,12 +39,13 @@ export class RegistrationsService {
   ): Promise<RegistrationDto> {
     try {
       const confirmed = await this.prisma.$transaction(async (tx) => {
-        const locked = await tx.$queryRaw<{ capacity: number; starts_at: Date }[]>`
-          SELECT capacity, starts_at FROM events WHERE id = ${eventId} FOR UPDATE`;
+        const locked = await tx.$queryRaw<
+          { capacity: number; starts_at: Date; cancelled_at: Date | null }[]
+        >`SELECT capacity, starts_at, cancelled_at FROM events WHERE id = ${eventId} FOR UPDATE`;
         if (locked.length === 0) {
           throw new NotFoundException(EVENT_NOT_FOUND_MESSAGE);
         }
-        const { capacity, starts_at: startsAt } = locked[0];
+        const { capacity, starts_at: startsAt, cancelled_at: cancelledAt } = locked[0];
 
         const existing = await tx.registration.findUnique({
           where: { eventId_userId: { eventId, userId } },
@@ -52,6 +53,9 @@ export class RegistrationsService {
         });
         if (existing) {
           throw new ConflictException(REGISTRATION_MESSAGES.alreadyRegistered);
+        }
+        if (cancelledAt) {
+          throw new ConflictException(REGISTRATION_MESSAGES.eventCancelled);
         }
         if (startsAt <= now) {
           throw new ConflictException(REGISTRATION_MESSAGES.eventPast);
@@ -100,18 +104,21 @@ export class RegistrationsService {
    * Annule l'inscription `registrationId` de `userId` (US06) : la place est libérée,
    * puisque les places restantes se déduisent des inscriptions.
    * 404 si elle n'existe pas, 403 si elle appartient à quelqu'un d'autre,
-   * 409 si l'événement est déjà passé.
+   * 409 si l'événement est annulé (US09) ou déjà passé.
    */
   async cancel(registrationId: string, userId: string, now: Date = new Date()): Promise<void> {
     const registration = await this.prisma.registration.findUnique({
       where: { id: registrationId },
-      select: { userId: true, event: { select: { startsAt: true } } },
+      select: { userId: true, event: { select: { startsAt: true, cancelledAt: true } } },
     });
     if (!registration) {
       throw new NotFoundException(REGISTRATION_MESSAGES.notFound);
     }
     if (registration.userId !== userId) {
       throw new ForbiddenException(REGISTRATION_MESSAGES.notOwner);
+    }
+    if (registration.event.cancelledAt) {
+      throw new ConflictException(REGISTRATION_MESSAGES.cancelCancelled);
     }
     if (registration.event.startsAt <= now) {
       throw new ConflictException(REGISTRATION_MESSAGES.cancelPast);

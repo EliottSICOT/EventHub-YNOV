@@ -392,6 +392,7 @@
                   "priceCents": 1500,
                   "remainingSeats": 300,
                   "isFull": false,
+                  "isCancelled": false,
                   "imageUrl": null,
                   "category": {
                     "id": "5d1f0c52-6a3e-4b8e-9a43-0d7f1e2b9c22",
@@ -506,7 +507,7 @@
     },
     "/api/v1/events/{id}": {
       "get": {
-        "description": "US03 : description, organisateur, date, lieu et places restantes.",
+        "description": "US03 : description, organisateur, date, lieu et places restantes. Un événement supprimé (US09) reste consultable, avec `isCancelled` à vrai.",
         "operationId": "getEvent",
         "parameters": [
           {
@@ -542,6 +543,316 @@
           }
         },
         "summary": "Détail d'un événement",
+        "tags": [
+          "events"
+        ]
+      },
+      "put": {
+        "description": "US09 : réservé à l'organisateur de l'événement, tant qu'il n'a pas commencé. Remplace tous les champs, avec les validations de la création ; un champ facultatif absent est effacé. La capacité ne peut pas passer sous le nombre d'inscrits.",
+        "operationId": "updateEvent",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Identifiant de l'événement",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateEventDto"
+              },
+              "examples": {
+                "concert": {
+                  "value": {
+                    "title": "Nuit du jazz",
+                    "description": "Trois quartets lyonnais se succèdent sur la scène du Transbordeur.",
+                    "categoryId": "5d1f0c52-6a3e-4b8e-9a43-0d7f1e2b9c22",
+                    "startsAt": "2026-12-05T18:00:00.000Z",
+                    "endsAt": "2026-12-05T21:00:00.000Z",
+                    "venue": "Le Transbordeur",
+                    "address": "3 boulevard de Stalingrad",
+                    "city": "Lyon",
+                    "capacity": 300,
+                    "priceCents": 1500
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Événement modifié",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventDetailDto"
+                },
+                "example": {
+                  "id": "3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11",
+                  "title": "Nuit du jazz",
+                  "description": "Trois quartets lyonnais se succèdent sur la scène du Transbordeur.",
+                  "startsAt": "2026-12-05T18:00:00.000Z",
+                  "endsAt": "2026-12-05T21:00:00.000Z",
+                  "venue": "Le Transbordeur",
+                  "address": "3 boulevard de Stalingrad",
+                  "city": "Lyon",
+                  "capacity": 300,
+                  "priceCents": 1500,
+                  "remainingSeats": 300,
+                  "isFull": false,
+                  "isCancelled": false,
+                  "imageUrl": null,
+                  "category": {
+                    "id": "5d1f0c52-6a3e-4b8e-9a43-0d7f1e2b9c22",
+                    "name": "Concert",
+                    "slug": "concert"
+                  },
+                  "organizer": {
+                    "id": "0d6a1b52-1b0e-4b8e-9a43-0d7f1e2b9c02",
+                    "name": "Camille Martin"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Champs invalides, catégorie inconnue ou capacité trop basse",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "examples": {
+                  "capacity": {
+                    "summary": "Capacité sous le nombre d'inscrits",
+                    "value": {
+                      "statusCode": 400,
+                      "error": "Bad Request",
+                      "message": "La requête contient des champs invalides",
+                      "details": [
+                        {
+                          "field": "capacity",
+                          "message": "La capacité ne peut pas être inférieure au nombre d'inscrits (42)"
+                        }
+                      ],
+                      "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11",
+                      "timestamp": "2026-11-20T10:33:21.774Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Pas de session, ou session expirée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "statusCode": 401,
+                  "error": "Unauthorized",
+                  "message": "Authentification requise",
+                  "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11",
+                  "timestamp": "2026-11-20T10:33:21.774Z"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "L'utilisateur connecté n'est pas l'organisateur de l'événement",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "statusCode": 403,
+                  "error": "Forbidden",
+                  "message": "Seul l'organisateur de l'événement peut le modifier ou le supprimer",
+                  "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11",
+                  "timestamp": "2026-11-20T10:33:21.774Z"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Événement inconnu",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "statusCode": 404,
+                  "error": "Not Found",
+                  "message": "L'événement demandé n'existe pas",
+                  "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11",
+                  "timestamp": "2026-11-20T10:33:21.774Z"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Événement annulé, ou déjà commencé",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "examples": {
+                  "cancelled": {
+                    "summary": "Événement annulé",
+                    "value": {
+                      "statusCode": 409,
+                      "error": "Conflict",
+                      "message": "Cet événement est annulé",
+                      "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11",
+                      "timestamp": "2026-11-20T10:33:21.774Z"
+                    }
+                  },
+                  "past": {
+                    "summary": "Événement déjà commencé",
+                    "value": {
+                      "statusCode": 409,
+                      "error": "Conflict",
+                      "message": "Impossible de modifier ou de supprimer un événement qui a déjà commencé",
+                      "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11",
+                      "timestamp": "2026-11-20T10:33:21.774Z"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Modifier un événement",
+        "tags": [
+          "events"
+        ]
+      },
+      "delete": {
+        "description": "US09 : réservé à l'organisateur de l'événement, tant qu'il n'a pas commencé. L'événement sort du catalogue et n'accepte plus d'inscription ; les inscrits le voient « Événement annulé ».",
+        "operationId": "deleteEvent",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Identifiant de l'événement",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Événement supprimé"
+          },
+          "401": {
+            "description": "Pas de session, ou session expirée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "statusCode": 401,
+                  "error": "Unauthorized",
+                  "message": "Authentification requise",
+                  "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11",
+                  "timestamp": "2026-11-20T10:33:21.774Z"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "L'utilisateur connecté n'est pas l'organisateur de l'événement",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "statusCode": 403,
+                  "error": "Forbidden",
+                  "message": "Seul l'organisateur de l'événement peut le modifier ou le supprimer",
+                  "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11",
+                  "timestamp": "2026-11-20T10:33:21.774Z"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Événement inconnu",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "statusCode": 404,
+                  "error": "Not Found",
+                  "message": "L'événement demandé n'existe pas",
+                  "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11",
+                  "timestamp": "2026-11-20T10:33:21.774Z"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Événement annulé, ou déjà commencé",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "examples": {
+                  "cancelled": {
+                    "summary": "Événement annulé",
+                    "value": {
+                      "statusCode": 409,
+                      "error": "Conflict",
+                      "message": "Cet événement est annulé",
+                      "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11",
+                      "timestamp": "2026-11-20T10:33:21.774Z"
+                    }
+                  },
+                  "past": {
+                    "summary": "Événement déjà commencé",
+                    "value": {
+                      "statusCode": 409,
+                      "error": "Conflict",
+                      "message": "Impossible de modifier ou de supprimer un événement qui a déjà commencé",
+                      "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11",
+                      "timestamp": "2026-11-20T10:33:21.774Z"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Supprimer un événement",
         "tags": [
           "events"
         ]
@@ -603,6 +914,7 @@
                   "priceCents": 1500,
                   "remainingSeats": 300,
                   "isFull": false,
+                  "isCancelled": false,
                   "imageUrl": "/uploads/7c9e6679-7425-40de-944b-e07fc1f90ae7.png",
                   "category": {
                     "id": "5d1f0c52-6a3e-4b8e-9a43-0d7f1e2b9c22",
@@ -751,7 +1063,7 @@
     },
     "/api/v1/events/{id}/registrations": {
       "post": {
-        "description": "US05 : inscrit l'utilisateur connecté, dans une transaction qui verrouille l'événement : deux inscriptions simultanées ne peuvent pas dépasser la capacité. Une inscription est refusée (409) si l'utilisateur est déjà inscrit, si l'événement est complet ou s'il est passé. US11 : un e-mail de confirmation est envoyé ; un échec d'envoi n'annule pas l'inscription.",
+        "description": "US05 : inscrit l'utilisateur connecté, dans une transaction qui verrouille l'événement : deux inscriptions simultanées ne peuvent pas dépasser la capacité. Une inscription est refusée (409) si l'utilisateur est déjà inscrit, si l'événement est annulé, complet ou passé. US11 : un e-mail de confirmation est envoyé ; un échec d'envoi n'annule pas l'inscription.",
         "operationId": "registerToEvent",
         "parameters": [
           {
@@ -817,7 +1129,7 @@
             }
           },
           "409": {
-            "description": "Déjà inscrit, événement complet ou événement passé",
+            "description": "Déjà inscrit, événement annulé, complet ou passé",
             "content": {
               "application/json": {
                 "schema": {
@@ -847,7 +1159,7 @@
     },
     "/api/v1/registrations/me": {
       "get": {
-        "description": "US06 : inscriptions de l'utilisateur connecté, de l'événement le plus proche au plus lointain, passées comprises (l'annulation n'est possible que pour les événements à venir).",
+        "description": "US06 : inscriptions de l'utilisateur connecté, de l'événement le plus proche au plus lointain, passées comprises (l'annulation n'est possible que pour les événements à venir). Un événement supprimé par son organisateur reste listé, avec `isCancelled` à vrai.",
         "operationId": "listMyRegistrations",
         "parameters": [],
         "responses": {
@@ -876,6 +1188,7 @@
                       "priceCents": 1500,
                       "remainingSeats": 41,
                       "isFull": false,
+                      "isCancelled": false,
                       "imageUrl": null,
                       "category": {
                         "id": "5d1f0c52-6a3e-4b8e-9a43-0d7f1e2b9c22",
@@ -919,7 +1232,7 @@
     },
     "/api/v1/registrations/{id}": {
       "delete": {
-        "description": "US06 : supprime l'inscription et libère la place (les places restantes augmentent de 1). Réservé au propriétaire de l'inscription (403 sinon) ; impossible pour un événement passé (409).",
+        "description": "US06 : supprime l'inscription et libère la place (les places restantes augmentent de 1). Réservé au propriétaire de l'inscription (403 sinon) ; impossible pour un événement annulé ou passé (409).",
         "operationId": "cancelRegistration",
         "parameters": [
           {
@@ -988,7 +1301,7 @@
             }
           },
           "409": {
-            "description": "Événement déjà passé",
+            "description": "Événement annulé ou déjà passé",
             "content": {
               "application/json": {
                 "schema": {
@@ -1264,6 +1577,11 @@
             "type": "boolean",
             "description": "Vrai si plus aucune place n’est disponible"
           },
+          "isCancelled": {
+            "type": "boolean",
+            "example": false,
+            "description": "Vrai si l'organisateur a supprimé l'événement : absent du catalogue, inscriptions fermées"
+          },
           "imageUrl": {
             "type": "string",
             "nullable": true,
@@ -1284,6 +1602,7 @@
           "priceCents",
           "remainingSeats",
           "isFull",
+          "isCancelled",
           "imageUrl",
           "category"
         ]
@@ -1405,6 +1724,11 @@
             "type": "boolean",
             "description": "Vrai si plus aucune place n’est disponible"
           },
+          "isCancelled": {
+            "type": "boolean",
+            "example": false,
+            "description": "Vrai si l'organisateur a supprimé l'événement : absent du catalogue, inscriptions fermées"
+          },
           "imageUrl": {
             "type": "string",
             "nullable": true,
@@ -1436,6 +1760,7 @@
           "priceCents",
           "remainingSeats",
           "isFull",
+          "isCancelled",
           "imageUrl",
           "category",
           "description",
@@ -1444,6 +1769,77 @@
         ]
       },
       "CreateEventDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "example": "Nuit du jazz",
+            "minLength": 3,
+            "maxLength": 120
+          },
+          "description": {
+            "type": "string",
+            "example": "Trois quartets lyonnais se succèdent sur la scène du Transbordeur.",
+            "maxLength": 5000
+          },
+          "categoryId": {
+            "type": "string",
+            "description": "Identifiant d’une catégorie existante (`GET /categories`)",
+            "example": "5d1f0c52-6a3e-4b8e-9a43-0d7f1e2b9c22"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Début de l’événement, dans le futur (date-heure ISO 8601).",
+            "example": "2026-12-05T18:00:00.000Z"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fin de l’événement, facultative, postérieure au début.",
+            "example": "2026-12-05T21:00:00.000Z"
+          },
+          "venue": {
+            "type": "string",
+            "example": "Le Transbordeur",
+            "maxLength": 120
+          },
+          "address": {
+            "type": "string",
+            "example": "3 boulevard de Stalingrad",
+            "maxLength": 200
+          },
+          "city": {
+            "type": "string",
+            "example": "Lyon",
+            "maxLength": 100
+          },
+          "capacity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000,
+            "example": 300
+          },
+          "priceCents": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000000,
+            "description": "Prix en centimes d'euro, 0 pour un événement gratuit",
+            "example": 1500
+          }
+        },
+        "required": [
+          "title",
+          "description",
+          "categoryId",
+          "startsAt",
+          "venue",
+          "city",
+          "capacity",
+          "priceCents"
+        ]
+      },
+      "UpdateEventDto": {
         "type": "object",
         "properties": {
           "title": {

@@ -36,6 +36,7 @@ export function toEventSummary(event: EventWithSummary): EventSummaryDto {
     priceCents: event.priceCents,
     remainingSeats: remaining,
     isFull: remaining === 0,
+    isCancelled: Boolean(event.cancelledAt),
     imageUrl: event.imageUrl,
     category: event.category,
   };

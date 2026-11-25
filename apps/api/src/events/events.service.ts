@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { ValidationException } from '../common/errors/validation.exception.js';
 import type { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -6,6 +11,8 @@ import type { CreateEventDto } from './dto/create-event.dto.js';
 import type { EventDetailDto } from './dto/event-detail.dto.js';
 import type { ListEventsQueryDto } from './dto/list-events-query.dto.js';
 import type { PaginatedEventsDto } from './dto/paginated-events.dto.js';
+import type { UpdateEventDto } from './dto/update-event.dto.js';
+import { MANAGE_EVENT_MESSAGES } from './events.constants.js';
 import {
   eventDetailInclude,
   eventSummaryInclude,
@@ -62,32 +69,105 @@ export class EventsService {
 
   /** Crée un événement (US08) au nom de `organizerId`, l'utilisateur connecté. */
   async create(input: CreateEventDto, organizerId: string): Promise<EventDetailDto> {
-    const category = await this.prisma.category.findUnique({
-      where: { id: input.categoryId },
-      select: { id: true },
-    });
-    if (!category) {
-      throw new ValidationException([{ field: 'categoryId', message: CATEGORY_NOT_FOUND_MESSAGE }]);
-    }
-
+    await assertCategoryExists(this.prisma, input.categoryId);
     const event = await this.prisma.event.create({
-      data: {
-        title: input.title,
-        description: input.description,
-        startsAt: new Date(input.startsAt),
-        endsAt: input.endsAt ? new Date(input.endsAt) : null,
-        venue: input.venue,
-        address: input.address ?? null,
-        city: input.city,
-        capacity: input.capacity,
-        priceCents: input.priceCents,
-        categoryId: category.id,
-        organizerId,
-      },
+      data: { ...toEventData(input), organizerId },
       include: eventDetailInclude,
     });
     return toEventDetail(event);
   }
+
+  /**
+   * Modifie un événement à venir de `userId` (US09). La ligne est verrouillée, comme pour une
+   * inscription : personne ne peut s'inscrire entre le décompte des inscrits et la mise à jour,
+   * la capacité ne passe donc jamais sous le nombre d'inscrits.
+   */
+  async update(
+    id: string,
+    input: UpdateEventDto,
+    userId: string,
+    now: Date = new Date(),
+  ): Promise<EventDetailDto> {
+    return this.prisma.$transaction(async (tx) => {
+      await lockManageableEvent(tx, id, userId, now);
+      await assertCategoryExists(tx, input.categoryId);
+
+      const registered = await tx.registration.count({ where: { eventId: id } });
+      if (input.capacity < registered) {
+        throw new ValidationException([
+          {
+            field: 'capacity',
+            message: MANAGE_EVENT_MESSAGES.capacityBelowRegistrations(registered),
+          },
+        ]);
+      }
+
+      const event = await tx.event.update({
+        where: { id },
+        data: toEventData(input),
+        include: eventDetailInclude,
+      });
+      return toEventDetail(event);
+    });
+  }
+
+  /**
+   * Supprime un événement à venir de `userId` (US09). La ligne et les inscriptions restent en
+   * base : l'événement sort du catalogue, et les inscrits le voient « Événement annulé ».
+   */
+  async cancel(id: string, userId: string, now: Date = new Date()): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      await lockManageableEvent(tx, id, userId, now);
+      await tx.event.update({ where: { id }, data: { cancelledAt: now } });
+    });
+  }
+}
+
+/** Colonnes d'un événement à partir d'un corps déjà validé. */
+function toEventData(input: CreateEventDto) {
+  return {
+    title: input.title,
+    description: input.description,
+    startsAt: new Date(input.startsAt),
+    endsAt: input.endsAt ? new Date(input.endsAt) : null,
+    venue: input.venue,
+    address: input.address ?? null,
+    city: input.city,
+    capacity: input.capacity,
+    priceCents: input.priceCents,
+    categoryId: input.categoryId,
+  };
+}
+
+async function assertCategoryExists(db: Prisma.TransactionClient, categoryId: string) {
+  const category = await db.category.findUnique({
+    where: { id: categoryId },
+    select: { id: true },
+  });
+  if (!category) {
+    throw new ValidationException([{ field: 'categoryId', message: CATEGORY_NOT_FOUND_MESSAGE }]);
+  }
+}
+
+/**
+ * Verrouille l'événement jusqu'à la fin de la transaction et vérifie que `userId` peut le gérer :
+ * 404 s'il n'existe pas, 403 s'il est à quelqu'un d'autre, 409 s'il est annulé ou a commencé.
+ */
+async function lockManageableEvent(
+  tx: Prisma.TransactionClient,
+  id: string,
+  userId: string,
+  now: Date,
+) {
+  const [event] = await tx.$queryRaw<
+    { organizer_id: string; starts_at: Date; cancelled_at: Date | null }[]
+  >`SELECT organizer_id, starts_at, cancelled_at FROM events WHERE id = ${id} FOR UPDATE`;
+  if (!event) throw new NotFoundException(EVENT_NOT_FOUND_MESSAGE);
+  if (event.organizer_id !== userId) {
+    throw new ForbiddenException(MANAGE_EVENT_MESSAGES.notOrganizer);
+  }
+  if (event.cancelled_at) throw new ConflictException(MANAGE_EVENT_MESSAGES.alreadyCancelled);
+  if (event.starts_at <= now) throw new ConflictException(MANAGE_EVENT_MESSAGES.past);
 }
 
 /** Traduit les filtres du catalogue en clause Prisma. */
@@ -111,6 +191,8 @@ export function buildEventsWhere(
 
   return {
     startsAt,
+    // Un événement supprimé par son organisateur (US09) sort du catalogue.
+    cancelledAt: null,
     ...(query.category && { category: { slug: query.category } }),
     ...(query.city && {
       city: { contains: query.city, mode: 'insensitive' as const },
