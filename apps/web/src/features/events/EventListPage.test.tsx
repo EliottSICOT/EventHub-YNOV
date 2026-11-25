@@ -152,3 +152,129 @@ describe('Aucun événement passé, pagination cohérente (US01, #47)', () => {
     expect(await screen.findAllByRole('article')).toHaveLength(4);
   });
 });
+
+describe('Recherche et tri (US10)', () => {
+  /** Paramètres des appels à GET /events pendant le test. */
+  function spyOnRequests() {
+    const queries: URLSearchParams[] = [];
+    server.events.on('request:start', ({ request }) => {
+      const url = new URL(request.url);
+      if (url.pathname === '/api/v1/events') queries.push(url.searchParams);
+    });
+    return queries;
+  }
+
+  const search = () => screen.getByLabelText('Rechercher');
+  const sortBy = () => screen.getByLabelText('Trier par');
+
+  it('cherche par mots, sans majuscules ni accents, et le reflète dans l’URL', async () => {
+    const user = userEvent.setup();
+    const { router } = renderApp('/events');
+    await screen.findByText('15 événements');
+
+    await user.type(search(), 'FESTIVAL electro');
+
+    expect(await screen.findByText('1 événement')).toBeInTheDocument();
+    expect(cardTitles()).toEqual(['Festival électro']);
+    expect(router.state.location.search).toBe('?q=FESTIVAL+electro');
+  });
+
+  it('attend une pause de frappe : pas un appel par lettre', async () => {
+    const user = userEvent.setup();
+    const queries = spyOnRequests();
+    renderApp('/events');
+    await screen.findByText('15 événements');
+
+    await user.type(search(), 'atelier');
+    await waitFor(() => expect(queries.at(-1)?.get('q')).toBe('atelier'));
+
+    // Décompte exact avec une horloge simulée : useDebouncedText.test.tsx.
+    expect(queries.length).toBeLessThan('atelier'.length);
+  });
+
+  it.each([
+    ['Prix croissant', 'price', (e: (typeof events)[number]) => e.priceCents, 1],
+    ['Prix décroissant', '-price', (e: (typeof events)[number]) => e.priceCents, -1],
+    [
+      'Places restantes : moins au plus',
+      'seats',
+      (e: (typeof events)[number]) => e.remainingSeats,
+      1,
+    ],
+    [
+      'Places restantes : plus au moins',
+      '-seats',
+      (e: (typeof events)[number]) => e.remainingSeats,
+      -1,
+    ],
+    ['Date : plus lointaine', '-date', (e: (typeof events)[number]) => Date.parse(e.startsAt), -1],
+  ])('trie par « %s »', async (label, sort, key, direction) => {
+    const user = userEvent.setup();
+    const { router } = renderApp('/events');
+    await screen.findByText('15 événements');
+
+    await user.selectOptions(sortBy(), label);
+
+    const expected = [...events]
+      .sort((a, b) => direction * (key(a) - key(b)) || a.startsAt.localeCompare(b.startsAt))
+      .slice(0, 12)
+      .map((e) => e.title);
+    await waitFor(() => expect(cardTitles()).toEqual(expected));
+    expect(router.state.location.search).toBe(`?sort=${sort}`);
+  });
+
+  it("n'écrit pas le tri par défaut dans l'URL", async () => {
+    const user = userEvent.setup();
+    const { router } = renderApp('/events?sort=price');
+    await screen.findByText('15 événements');
+    expect(sortBy()).toHaveValue('price');
+
+    await user.selectOptions(sortBy(), 'Date : plus proche');
+    expect(router.state.location.search).toBe('');
+  });
+
+  it('combine recherche, tri et filtres, restaurés depuis l’URL', async () => {
+    const queries = spyOnRequests();
+    renderApp('/events?q=lyon&category=concert&sort=-price');
+
+    await waitFor(() => expect(search()).toHaveValue('lyon'));
+    expect(sortBy()).toHaveValue('-price');
+    await screen.findByText('1 événement');
+    expect(cardTitles()).toEqual(['Nuit du jazz']);
+    expect(Object.fromEntries(queries[0])).toMatchObject({
+      q: 'lyon',
+      category: 'concert',
+      sort: '-price',
+    });
+  });
+
+  it('ignore un tri inconnu dans l’URL', async () => {
+    const queries = spyOnRequests();
+    renderApp('/events?sort=titre');
+    expect(await screen.findByText('15 événements')).toBeInTheDocument();
+    expect(sortBy()).toHaveValue('date');
+    expect(queries[0].has('sort')).toBe(false);
+  });
+
+  it('revient à la première page quand la recherche change', async () => {
+    const user = userEvent.setup();
+    const { router } = renderApp('/events?page=2');
+    await screen.findByText('Page 2 sur 2');
+    await user.type(search(), 'un');
+    await waitFor(() => expect(router.state.location.search).toBe('?q=un'));
+  });
+
+  it('indique quand aucun événement ne correspond, et réinitialise recherche et tri', async () => {
+    const user = userEvent.setup();
+    const { router } = renderApp('/events?q=introuvable&sort=price');
+    expect(
+      await screen.findByText('Aucun événement ne correspond à ces filtres.'),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Réinitialiser' }));
+    expect(await screen.findByText('15 événements')).toBeInTheDocument();
+    expect(search()).toHaveValue('');
+    expect(sortBy()).toHaveValue('date');
+    expect(router.state.location.search).toBe('');
+  });
+});
