@@ -41,6 +41,13 @@ export class EventSummaryDto {
   @ApiProperty({ description: 'Vrai si plus aucune place n’est disponible' })
   isFull: boolean;
 
+  @ApiProperty({
+    example: false,
+    description:
+      "Vrai si l'organisateur a supprimé l'événement : absent du catalogue, inscriptions fermées",
+  })
+  isCancelled: boolean;
+
   @ApiProperty({ type: String, nullable: true, example: null })
   imageUrl: string | null;
 

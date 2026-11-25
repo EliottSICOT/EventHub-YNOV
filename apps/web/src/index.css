@@ -608,6 +608,11 @@ a.button {
   gap: 8px;
   margin-top: 20px;
 }
+.event-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
 .detail__actions:empty {
   display: none;
 }

@@ -34,7 +34,7 @@ export class RegistrationsController {
   @ApiOperation({
     summary: "S'inscrire à un événement",
     description:
-      "US05 : inscrit l'utilisateur connecté, dans une transaction qui verrouille l'événement : deux inscriptions simultanées ne peuvent pas dépasser la capacité. Une inscription est refusée (409) si l'utilisateur est déjà inscrit, si l'événement est complet ou s'il est passé. US11 : un e-mail de confirmation est envoyé ; un échec d'envoi n'annule pas l'inscription.",
+      "US05 : inscrit l'utilisateur connecté, dans une transaction qui verrouille l'événement : deux inscriptions simultanées ne peuvent pas dépasser la capacité. Une inscription est refusée (409) si l'utilisateur est déjà inscrit, si l'événement est annulé, complet ou passé. US11 : un e-mail de confirmation est envoyé ; un échec d'envoi n'annule pas l'inscription.",
   })
   @ApiParam({ name: 'id', description: "Identifiant de l'événement" })
   @ApiCreatedResponse({
@@ -54,7 +54,7 @@ export class RegistrationsController {
   })
   @ApiConflictResponse({
     type: ApiErrorDto,
-    description: 'Déjà inscrit, événement complet ou événement passé',
+    description: 'Déjà inscrit, événement annulé, complet ou passé',
     example: alreadyRegisteredExample,
   })
   registerToEvent(@Param('id') id: string, @CurrentUser() user: UserDto): Promise<RegistrationDto> {

@@ -1,11 +1,13 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
   Param,
   Post,
+  Put,
   Query,
   UploadedFile,
   UseGuards,
@@ -14,10 +16,12 @@ import {
 import {
   ApiBadRequestResponse,
   ApiBody,
+  ApiConflictResponse,
   ApiConsumes,
   ApiCookieAuth,
   ApiCreatedResponse,
   ApiForbiddenResponse,
+  ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -36,6 +40,7 @@ import { CreateEventDto } from './dto/create-event.dto.js';
 import { EventDetailDto } from './dto/event-detail.dto.js';
 import { ListEventsQueryDto } from './dto/list-events-query.dto.js';
 import { PaginatedEventsDto } from './dto/paginated-events.dto.js';
+import { UpdateEventDto } from './dto/update-event.dto.js';
 import {
   IMAGE_FIELD,
   ImageUploadInterceptor,
@@ -44,17 +49,23 @@ import {
 } from './event-image.js';
 import { EventImagesService } from './event-images.service.js';
 import {
+  capacityTooLowExample,
   createdEventExample,
   createEventExample,
   createForbiddenExample,
   createUnauthenticatedExample,
   createValidationErrorExample,
+  eventCancelledExample,
+  eventPastExample,
   eventWithImageExample,
   imageForbiddenExample,
   imageFormatErrorExample,
   imageNotFoundExample,
   imageTooLargeExample,
   imageUnauthenticatedExample,
+  manageForbiddenExample,
+  manageNotFoundExample,
+  manageUnauthenticatedExample,
   unknownCategoryExample,
 } from './events.examples.js';
 import { EventsService } from './events.service.js';
@@ -85,7 +96,8 @@ export class EventsController {
   @Get(':id')
   @ApiOperation({
     summary: "Détail d'un événement",
-    description: 'US03 : description, organisateur, date, lieu et places restantes.',
+    description:
+      'US03 : description, organisateur, date, lieu et places restantes. Un événement supprimé (US09) reste consultable, avec `isCancelled` à vrai.',
   })
   @ApiParam({ name: 'id', description: "Identifiant de l'événement" })
   @ApiOkResponse({ type: EventDetailDto })
@@ -129,6 +141,99 @@ export class EventsController {
   })
   createEvent(@Body() body: CreateEventDto, @CurrentUser() user: UserDto): Promise<EventDetailDto> {
     return this.eventsService.create(body, user.id);
+  }
+
+  @Put(':id')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.ORGANIZER)
+  @ApiCookieAuth(SESSION_SECURITY)
+  @ApiOperation({
+    summary: 'Modifier un événement',
+    description:
+      "US09 : réservé à l'organisateur de l'événement, tant qu'il n'a pas commencé. Remplace tous les champs, avec les validations de la création ; un champ facultatif absent est effacé. La capacité ne peut pas passer sous le nombre d'inscrits.",
+  })
+  @ApiParam({ name: 'id', description: "Identifiant de l'événement" })
+  @ApiBody({ type: UpdateEventDto, examples: { concert: { value: createEventExample } } })
+  @ApiOkResponse({
+    type: EventDetailDto,
+    description: 'Événement modifié',
+    example: createdEventExample,
+  })
+  @ApiBadRequestResponse({
+    type: ApiErrorDto,
+    description: 'Champs invalides, catégorie inconnue ou capacité trop basse',
+    examples: {
+      capacity: { summary: "Capacité sous le nombre d'inscrits", value: capacityTooLowExample },
+    },
+  })
+  @ApiUnauthorizedResponse({
+    type: ApiErrorDto,
+    description: 'Pas de session, ou session expirée',
+    example: manageUnauthenticatedExample,
+  })
+  @ApiForbiddenResponse({
+    type: ApiErrorDto,
+    description: "L'utilisateur connecté n'est pas l'organisateur de l'événement",
+    example: manageForbiddenExample,
+  })
+  @ApiNotFoundResponse({
+    type: ApiErrorDto,
+    description: 'Événement inconnu',
+    example: manageNotFoundExample,
+  })
+  @ApiConflictResponse({
+    type: ApiErrorDto,
+    description: 'Événement annulé, ou déjà commencé',
+    examples: {
+      cancelled: { summary: 'Événement annulé', value: eventCancelledExample },
+      past: { summary: 'Événement déjà commencé', value: eventPastExample },
+    },
+  })
+  updateEvent(
+    @Param('id') id: string,
+    @Body() body: UpdateEventDto,
+    @CurrentUser() user: UserDto,
+  ): Promise<EventDetailDto> {
+    return this.eventsService.update(id, body, user.id);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.ORGANIZER)
+  @ApiCookieAuth(SESSION_SECURITY)
+  @ApiOperation({
+    summary: 'Supprimer un événement',
+    description:
+      "US09 : réservé à l'organisateur de l'événement, tant qu'il n'a pas commencé. L'événement sort du catalogue et n'accepte plus d'inscription ; les inscrits le voient « Événement annulé ».",
+  })
+  @ApiParam({ name: 'id', description: "Identifiant de l'événement" })
+  @ApiNoContentResponse({ description: 'Événement supprimé' })
+  @ApiUnauthorizedResponse({
+    type: ApiErrorDto,
+    description: 'Pas de session, ou session expirée',
+    example: manageUnauthenticatedExample,
+  })
+  @ApiForbiddenResponse({
+    type: ApiErrorDto,
+    description: "L'utilisateur connecté n'est pas l'organisateur de l'événement",
+    example: manageForbiddenExample,
+  })
+  @ApiNotFoundResponse({
+    type: ApiErrorDto,
+    description: 'Événement inconnu',
+    example: manageNotFoundExample,
+  })
+  @ApiConflictResponse({
+    type: ApiErrorDto,
+    description: 'Événement annulé, ou déjà commencé',
+    examples: {
+      cancelled: { summary: 'Événement annulé', value: eventCancelledExample },
+      past: { summary: 'Événement déjà commencé', value: eventPastExample },
+    },
+  })
+  deleteEvent(@Param('id') id: string, @CurrentUser() user: UserDto): Promise<void> {
+    return this.eventsService.cancel(id, user.id);
   }
 
   @Post(':id/image')

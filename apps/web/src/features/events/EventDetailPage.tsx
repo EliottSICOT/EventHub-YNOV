@@ -4,6 +4,8 @@ import { useEvent } from '../../api/queries';
 import { Spinner } from '../../components/Spinner';
 import { StatusMessage } from '../../components/StatusMessage';
 import type { CreatedEventState } from '../organizer/CreateEventPage';
+import type { UpdatedEventState } from '../organizer/EditEventPage';
+import { EventActions } from '../organizer/EventActions';
 import { RegisterButton } from '../registrations/RegisterButton';
 import { formatDateTime, formatPrice } from './format';
 import { SeatsBadge } from './SeatsBadge';
@@ -12,8 +14,9 @@ import { SeatsBadge } from './SeatsBadge';
 export function EventDetailPage() {
   const { id = '' } = useParams();
   const { data: event, isPending, isError, error, refetch } = useEvent(id);
-  // Arrivée depuis le formulaire de création (US08).
-  const created = useLocation().state as CreatedEventState | null;
+  // Arrivée depuis le formulaire de création (US08) ou de modification (US09).
+  const saved = useLocation().state as CreatedEventState | UpdatedEventState | null;
+  const isNew = saved !== null && 'created' in saved;
 
   const back = (
     <Link to="/events" className="back-link">
@@ -46,16 +49,25 @@ export function EventDetailPage() {
   return (
     <article className="page detail">
       {back}
-      {created?.created && (
+      {saved && !event.isCancelled && (
         <p className="notice notice--success" role="status">
-          Événement créé : il est maintenant visible dans le catalogue.
+          {isNew
+            ? 'Événement créé : il est maintenant visible dans le catalogue.'
+            : 'Événement modifié.'}
         </p>
       )}
-      {created?.imageError && (
+      {saved?.imageError && (
         <p className="notice notice--warning" role="alert">
-          L'événement est bien créé, mais l'image n'a pas été enregistrée : {created.imageError}
+          L'événement est bien {isNew ? 'créé' : 'modifié'}, mais l'image n'a pas été enregistrée :{' '}
+          {saved.imageError}
         </p>
       )}
+      {event.isCancelled && (
+        <p className="notice notice--error">
+          <strong>Événement annulé</strong> par son organisateur : les inscriptions sont fermées.
+        </p>
+      )}
+      <EventActions event={event} />
       {event.imageUrl ? (
         <img className="detail__image" src={event.imageUrl} alt={`Visuel de ${event.title}`} />
       ) : (

@@ -31,7 +31,15 @@ function withSession(user: User | null) {
 const meta = {
   title: 'Inscriptions/RegisterButton',
   component: RegisterButton,
-  args: { event: { id: 'evt-1', title: 'Meetup TypeScript', startsAt: future, isFull: false } },
+  args: {
+    event: {
+      id: 'evt-1',
+      title: 'Meetup TypeScript',
+      startsAt: future,
+      isFull: false,
+      isCancelled: false,
+    },
+  },
 } satisfies Meta<typeof RegisterButton>;
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -40,9 +48,37 @@ export const Visiteur: Story = { decorators: [withSession(null)] };
 export const Connecte: Story = { decorators: [withSession(participant)] };
 export const Complet: Story = {
   decorators: [withSession(participant)],
-  args: { event: { id: 'evt-1', title: 'Meetup TypeScript', startsAt: future, isFull: true } },
+  args: {
+    event: {
+      id: 'evt-1',
+      title: 'Meetup TypeScript',
+      startsAt: future,
+      isFull: true,
+      isCancelled: false,
+    },
+  },
 };
 export const Termine: Story = {
   decorators: [withSession(participant)],
-  args: { event: { id: 'evt-1', title: 'Meetup TypeScript', startsAt: past, isFull: false } },
+  args: {
+    event: {
+      id: 'evt-1',
+      title: 'Meetup TypeScript',
+      startsAt: past,
+      isFull: false,
+      isCancelled: false,
+    },
+  },
+};
+export const Annule: Story = {
+  decorators: [withSession(participant)],
+  args: {
+    event: {
+      id: 'evt-1',
+      title: 'Meetup TypeScript',
+      startsAt: future,
+      isFull: false,
+      isCancelled: true,
+    },
+  },
 };

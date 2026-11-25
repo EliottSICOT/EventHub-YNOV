@@ -68,6 +68,9 @@ model Event {
   /// Prix en centimes d'euro, 0 pour un événement gratuit
   priceCents    Int            @default(0) @map("price_cents")
   imageUrl      String?        @map("image_url")
+  /// Événement supprimé par son organisateur (US09) : la ligne reste, pour que les inscrits
+  /// voient « Événement annulé ».
+  cancelledAt   DateTime?      @map("cancelled_at")
   categoryId    String         @map("category_id")
   category      Category       @relation(fields: [categoryId], references: [id])
   organizerId   String         @map("organizer_id")
