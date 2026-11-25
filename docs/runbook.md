@@ -117,6 +117,52 @@ Copiez ce modèle dans le bon groupe de la section [Symptômes](#symptômes). Le
 
 ## Symptômes
 
+### CI et tests
+
+#### CI : « openapi.json ou schema.d.ts n'est pas à jour »
+
+- **Symptôme** : le job « Format et contrat OpenAPI » échoue à l'étape « Le contrat et les types du Front sont à jour », avec l'annotation `openapi.json ou schema.d.ts n'est pas à jour : lancez 'pnpm contract' et commitez le résultat.`
+- **Cause** : un DTO ou un décorateur `@nestjs/swagger` a changé côté API, mais `contract/openapi.json` et `apps/web/src/api/schema.d.ts` n'ont pas été régénérés et commités. La CI relance `pnpm contract` et refuse toute différence. Voir le README, section [Workflow du contrat OpenAPI](../README.md#workflow-du-contrat-openapi).
+- **Diagnostic** : les mêmes commandes que la CI. `exit=1` et la liste des fichiers confirment la cause.
+
+  ```bash
+  pnpm contract
+  git diff --exit-code --stat -- contract/openapi.json apps/web/src/api/schema.d.ts; echo "exit=$?"
+  ```
+
+  Dans PowerShell, remplacez `echo "exit=$?"` par `echo "exit=$LASTEXITCODE"`. Sous Windows, Git peut afficher `LF will be replaced by CRLF` : ce n'est qu'un avertissement.
+
+- **Correction** :
+
+  ```bash
+  pnpm contract
+  git add contract/openapi.json apps/web/src/api/schema.d.ts
+  git commit -m "chore(contract): contrat et types du Front régénérés"
+  ```
+
+- **Prévention** : lancer `pnpm contract` dans le même commit que toute modification d'un DTO, d'un contrôleur ou d'un exemple du contrat, puis relancer le diagnostic avant de pousser.
+- **Source** : runs de CI [45355041654](https://github.com/EliottSICOT/EventHub-YNOV/actions/runs/45355041654) (branche `sprint-2/us05-inscription-front`, commit `10f037a`) et [45371732692](https://github.com/EliottSICOT/EventHub-YNOV/actions/runs/45371732692) (branche `sprint-3/us06-annulation-front`, commit `120ee28`). Diagnostic retesté en local le 2026-11-25.
+- **Date** : 2026-11-24
+- **Auteur** : Eliott Sicot
+
+#### Un test Front passe en local mais échoue en CI après une fusion de `main`
+
+- **Symptôme** : le job « Front (React) » échoue à l'étape `pnpm test`, avec `Error: expect(element).toBeInTheDocument()` et `element could not be found in the document` sur `src/features/registrations/MyRegistrationsPage.test.tsx:254`. Le même test passait avant la fusion de `main` dans la branche.
+- **Cause** : le test atteignait l'état voulu en rejouant à l'écran tout un parcours (déconnexion, lien « Connexion », formulaire de connexion). Après la fusion de `main` (commit `48edf1c`), ce parcours ne menait plus à l'élément attendu. Un test qui dépend de redirections étrangères à ce qu'il vérifie casse dès qu'elles changent.
+- **Diagnostic** : rejouer le fichier en échec sur la branche à jour de `main`.
+
+  ```bash
+  git fetch origin
+  git merge origin/main
+  pnpm --filter web test src/features/registrations/MyRegistrationsPage.test.tsx
+  ```
+
+- **Correction** : préparer l'état directement (session simulée, cache de requêtes) au lieu de rejouer la navigation, comme dans le commit `c31dfb3` : `mockAuth.signIn(...)` puis `queryClient.setQueryData(meQueryKey, ...)`.
+- **Prévention** : dans un test de composant, ne parcourir à l'écran que le comportement testé. Avant de pousser une branche qui a fusionné `main`, relancer `pnpm --filter web test`.
+- **Source** : run de CI [45372626108](https://github.com/EliottSICOT/EventHub-YNOV/actions/runs/45372626108) (branche `sprint-3/us07-mes-inscriptions`, commit `48edf1c`), corrigé par le commit `c31dfb3` (run suivant en succès).
+- **Date** : 2026-11-24
+- **Auteur** : Eliott Sicot
+
 ## Rituel
 
 | Moment                     | Action                         | Responsable                             |
