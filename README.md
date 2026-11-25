@@ -23,7 +23,9 @@ EventHub-YNOV/
 
 ## Démarrer
 
-Prérequis : Node 24, pnpm 11 (`corepack enable`), Docker.
+Prérequis : Node 24 ou plus, pnpm 11.13.1 (`npm install -g pnpm@11.13.1`), Docker.
+
+Ce démarrage existe aussi en checklist, avec les pannes déjà rencontrées et leurs corrections, dans le runbook : [docs/runbook.md](docs/runbook.md).
 
 ```bash
 pnpm install                      # installe tout et génère le client Prisma
@@ -176,5 +178,7 @@ Les tests e2e créent la base `eventhub_test` si besoin et refusent de tourner s
 | 2      | US04, US05           | Livré                           |
 | 3      | US06 à US09          | Livré                           |
 | 4      | US10 à US13 (+ US14) | En cours : US10 et US11 livrées |
+
+Runbook de l'équipe (#58) : [docs/runbook.md](docs/runbook.md), avec « Démarrer en local », 9 symptômes documentés et le rituel de mise à jour.
 
 Le schéma Prisma contient déjà `users` et `registrations` : les places restantes se calculent à partir des inscriptions.
