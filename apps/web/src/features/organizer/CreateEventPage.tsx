@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { ApiError } from '../../api/client';
 import { useCategories } from '../../api/queries';
 import type { CreateEventInput } from '../../api/types';
 import { StatusMessage } from '../../components/StatusMessage';
 import { errorsFromApi, type FormErrors } from '../auth/validation';
-import { useCreateEvent, useUploadEventImage } from './api';
+import { imageErrorMessage, useCreateEvent, useUploadEventImage } from './api';
 import { CreateEventForm } from './CreateEventForm';
 import { EVENT_FIELDS, type EventField } from './eventForm';
 
@@ -14,11 +13,6 @@ export interface CreatedEventState {
   created: true;
   /** Raison de l'échec de l'envoi de l'image ; l'événement, lui, est créé. */
   imageError?: string;
-}
-
-function imageErrorMessage(error: unknown): string {
-  if (error instanceof ApiError) return error.body?.details?.[0]?.message ?? error.message;
-  return 'Impossible de contacter le serveur.';
 }
 
 /**
