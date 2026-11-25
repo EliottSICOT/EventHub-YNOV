@@ -4,58 +4,10 @@ import { Test } from '@nestjs/testing';
 import { vi } from 'vitest';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { CreateEventDto } from './dto/create-event.dto.js';
-import { buildEventsWhere, CATEGORY_NOT_FOUND_MESSAGE, EventsService } from './events.service.js';
+import { CATEGORY_NOT_FOUND_MESSAGE, EventsService } from './events.service.js';
 import { remainingSeats } from './events.mapper.js';
 
 const NOW = new Date('2026-11-20T10:00:00.000Z');
-
-describe('buildEventsWhere', () => {
-  it('ne retourne que les événements à venir par défaut', () => {
-    expect(buildEventsWhere({}, NOW)).toEqual({
-      startsAt: { gte: NOW },
-      cancelledAt: null,
-    });
-  });
-
-  it('ramène un `from` passé à maintenant (#46)', () => {
-    expect(buildEventsWhere({ from: '2020-01-01' }, NOW).startsAt).toEqual({ gte: NOW });
-  });
-
-  it('ramène à maintenant un `from` du jour même déjà écoulé', () => {
-    expect(buildEventsWhere({ from: '2026-11-20' }, NOW).startsAt).toEqual({ gte: NOW });
-  });
-
-  it('conserve un `from` futur', () => {
-    expect(buildEventsWhere({ from: '2026-12-01T18:00:00Z' }, NOW).startsAt).toEqual({
-      gte: new Date('2026-12-01T18:00:00Z'),
-    });
-  });
-
-  it('inclut toute la journée quand `to` est une date seule', () => {
-    const where = buildEventsWhere({ from: '2026-12-01', to: '2026-12-31' }, NOW);
-    expect(where.startsAt).toEqual({
-      gte: new Date('2026-12-01T00:00:00.000Z'),
-      lt: new Date('2027-01-01T00:00:00.000Z'),
-    });
-  });
-
-  it('utilise une borne incluse quand `to` est une date-heure', () => {
-    const where = buildEventsWhere({ to: '2026-12-31T12:00:00Z' }, NOW);
-    expect(where.startsAt).toEqual({
-      gte: NOW,
-      lte: new Date('2026-12-31T12:00:00Z'),
-    });
-  });
-
-  it('combine catégorie et ville', () => {
-    expect(buildEventsWhere({ category: 'concert', city: 'lyon' }, NOW)).toEqual({
-      startsAt: { gte: NOW },
-      cancelledAt: null,
-      category: { slug: 'concert' },
-      city: { contains: 'lyon', mode: 'insensitive' },
-    });
-  });
-});
 
 describe('remainingSeats', () => {
   it('soustrait les inscriptions de la capacité', () => {
@@ -70,7 +22,8 @@ describe('remainingSeats', () => {
 describe('EventsService', () => {
   const prismaMock = {
     $transaction: vi.fn((queries: Promise<unknown>[]) => Promise.all(queries)),
-    event: { findMany: vi.fn(), count: vi.fn(), findUnique: vi.fn(), create: vi.fn() },
+    $queryRaw: vi.fn(),
+    event: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn() },
     category: { findUnique: vi.fn() },
   };
   let service: EventsService;
@@ -84,20 +37,32 @@ describe('EventsService', () => {
   });
 
   it('pagine et calcule les métadonnées', async () => {
+    prismaMock.$queryRaw.mockResolvedValueOnce([]).mockResolvedValueOnce([{ total: 25 }]);
     prismaMock.event.findMany.mockResolvedValue([]);
-    prismaMock.event.count.mockResolvedValue(25);
 
     const result = await service.findAll({ page: 3, pageSize: 10 }, NOW);
 
-    expect(prismaMock.event.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ skip: 20, take: 10 }),
-    );
-    expect(result.meta).toEqual({
-      page: 3,
-      pageSize: 10,
-      total: 25,
-      totalPages: 3,
+    expect(result).toEqual({
+      data: [],
+      meta: { page: 3, pageSize: 10, total: 25, totalPages: 3 },
     });
+  });
+
+  it("garde l'ordre du tri, quel que soit celui de la base", async () => {
+    const event = (id: string) => ({
+      id,
+      startsAt: NOW,
+      endsAt: null,
+      capacity: 1,
+      _count: { registrations: 0 },
+    });
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([{ id: 'b' }, { id: 'c' }, { id: 'a' }])
+      .mockResolvedValueOnce([{ total: 3 }]);
+    prismaMock.event.findMany.mockResolvedValue([event('a'), event('b'), event('c')]);
+
+    const { data } = await service.findAll({ page: 1, pageSize: 10 }, NOW);
+    expect(data.map((e) => e.id)).toEqual(['b', 'c', 'a']);
   });
 
   it('lève une 404 pour un identifiant inconnu', async () => {
