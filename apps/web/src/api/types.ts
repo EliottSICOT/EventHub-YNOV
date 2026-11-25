@@ -1,9 +1,12 @@
-import type { components } from './schema';
+import type { components, paths } from './schema';
 
 type Schemas = components['schemas'];
 
 export type Category = Schemas['CategoryDto'];
 export type EventSummary = Schemas['EventSummaryDto'];
+export type EventSort = NonNullable<
+  NonNullable<paths['/api/v1/events']['get']['parameters']['query']>['sort']
+>;
 export type EventDetail = Schemas['EventDetailDto'];
 export type PaginatedEvents = Schemas['PaginatedEventsDto'];
 export type ApiErrorBody = Schemas['ApiErrorDto'];

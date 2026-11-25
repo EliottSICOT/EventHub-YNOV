@@ -1,6 +1,13 @@
 import { createOpenApiHttp } from 'openapi-msw';
 import type { paths } from '../api/schema';
-import type { Category, EventDetail, EventSummary, FieldError, User } from '../api/types';
+import type {
+  Category,
+  EventDetail,
+  EventSort,
+  EventSummary,
+  FieldError,
+  User,
+} from '../api/types';
 import { mockAuth } from './auth';
 import { mockEvents } from './events';
 import { categories as defaultCategories, events as defaultEvents } from './fixtures';
@@ -10,6 +17,36 @@ const http = createOpenApiHttp<paths>({ baseUrl: '*' });
 
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 const DAY = 24 * 60 * 60 * 1000;
+
+/** Mots d'un texte, sans majuscules ni accents, comme la recherche de l'API (US10). */
+function words(text: string): string[] {
+  return (
+    text
+      .normalize('NFD')
+      .replace(/\p{M}/gu, '')
+      .toLowerCase()
+      .replace(/œ/g, 'oe')
+      .match(/[\p{L}\p{N}]+/gu) ?? []
+  );
+}
+
+/** Tous les mots de `q` sont le début d'un mot du titre ou de la description. */
+function matchesSearch(event: EventDetail, q: string): boolean {
+  const text = words(`${event.title} ${event.description}`);
+  return words(q).every((word) => text.some((candidate) => candidate.startsWith(word)));
+}
+
+/** Tris de l'API ; à égalité, l'événement le plus proche d'abord. */
+function compareBy(sort: EventSort) {
+  const key = {
+    date: (e: EventSummary) => Date.parse(e.startsAt),
+    price: (e: EventSummary) => e.priceCents,
+    seats: (e: EventSummary) => e.remainingSeats,
+  }[sort.replace('-', '') as 'date' | 'price' | 'seats'];
+  const direction = sort.startsWith('-') ? -1 : 1;
+  return (a: EventSummary, b: EventSummary) =>
+    direction * (key(a) - key(b)) || a.startsAt.localeCompare(b.startsAt);
+}
 
 /** Applique les inscriptions simulées (US05) aux places restantes d'une fixture. */
 function withRegistrations<T extends { id: string; remainingSeats: number; isFull: boolean }>(
@@ -46,6 +83,8 @@ export function createHandlers(events = defaultEvents, categories = defaultCateg
       const to = query.get('to');
       const category = query.get('category');
       const city = query.get('city')?.toLowerCase();
+      const q = query.get('q') ?? '';
+      const sort = query.get('sort') ?? 'date';
 
       // Comme l'API : un `from` passé est ramené à maintenant, jamais d'événement passé.
       const now = Date.now();
@@ -72,15 +111,15 @@ export function createHandlers(events = defaultEvents, categories = defaultCateg
             start >= fromTime &&
             start < toTime &&
             (!category || e.category.slug === category) &&
-            (!city || e.city.toLowerCase().includes(city))
+            (!city || e.city.toLowerCase().includes(city)) &&
+            matchesSearch(e, q)
           );
         })
-        .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+        .map((e) => withRegistrations(toSummary(e)))
+        .sort(compareBy(sort));
 
       return response(200).json({
-        data: matching
-          .slice((page - 1) * pageSize, page * pageSize)
-          .map((e) => withRegistrations(toSummary(e))),
+        data: matching.slice((page - 1) * pageSize, page * pageSize),
         meta: {
           page,
           pageSize,
