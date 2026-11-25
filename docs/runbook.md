@@ -40,7 +40,7 @@ Les commandes se lancent à la racine du dépôt. Elles sont identiques dans Git
   pnpm db:up
   ```
 
-  ⚠️ Sous Windows, si un PostgreSQL installé sur la machine occupe déjà le port 5432, voir [P1010 au démarrage de l'API](#p1010--user-was-denied-access-on-the-database) avant d'aller plus loin.
+  ⚠️ Sous Windows, si un PostgreSQL installé sur la machine occupe déjà le port 5432, voir l'entrée [P1010](#p1010--user-was-denied-access-on-the-database) avant d'aller plus loin.
 
 - [ ] **Fichiers `.env`** :
 
@@ -122,7 +122,7 @@ Copiez ce modèle dans le bon groupe de la section [Symptômes](#symptômes). Le
 #### CI : « openapi.json ou schema.d.ts n'est pas à jour »
 
 - **Symptôme** : le job « Format et contrat OpenAPI » échoue à l'étape « Le contrat et les types du Front sont à jour », avec l'annotation `openapi.json ou schema.d.ts n'est pas à jour : lancez 'pnpm contract' et commitez le résultat.`
-- **Cause** : un DTO ou un décorateur `@nestjs/swagger` a changé côté API, mais `contract/openapi.json` et `apps/web/src/api/schema.d.ts` n'ont pas été régénérés et commités. La CI relance `pnpm contract` et refuse toute différence. Voir le README, section [Workflow du contrat OpenAPI](../README.md#workflow-du-contrat-openapi).
+- **Cause** : un DTO ou un décorateur `@nestjs/swagger` a changé côté API, mais `contract/openapi.json` et `apps/web/src/api/schema.d.ts` n'ont pas été régénérés et commités. La CI relance `pnpm contract` et refuse toute différence. Voir le README, sections [Workflow du contrat OpenAPI](../README.md#workflow-du-contrat-openapi) et [CI](../README.md#ci).
 - **Diagnostic** : les mêmes commandes que la CI. `exit=1` et la liste des fichiers confirment la cause.
 
   ```bash
@@ -298,7 +298,7 @@ Copiez ce modèle dans le bon groupe de la section [Symptômes](#symptômes). Le
 - **Symptôme** : sur la page détail, l'image est cassée (seul le texte alternatif « Visuel de … » apparaît), alors que l'événement a un `imageUrl` de la forme `/uploads/<uuid>.png`.
 - **Cause** : deux cas, reproduits tous les deux.
   1. Le Front tourne avec une configuration Vite sans proxy `/uploads` : Vite renvoie alors sa propre page HTML (`200 text/html`), pas l'image. Le proxy existe depuis le commit `83f3d4d` ; un serveur Vite lancé avant ce commit ne le connaît pas.
-  2. Le fichier n'est pas dans le dossier `UPLOADS_DIR` servi par l'API : dossier changé dans `apps/api/.env`, ou autre machine (les images ne sont pas versionnées). L'API répond `404` avec une page HTML `Cannot GET /uploads/<uuid>.png`. Voir le README, section [Dossier des images](../README.md#dossier-des-images).
+  2. Le fichier n'est pas dans le dossier `UPLOADS_DIR` servi par l'API : dossier changé dans `apps/api/.env`, ou autre machine (les images ne sont pas versionnées). L'API répond `404` avec une page HTML `Cannot GET /uploads/<uuid>.png`, et non avec le JSON décrit dans le README, section [Format des erreurs](../README.md#format-des-erreurs) : `/uploads` est servi hors de `/api/v1`. Voir aussi la section [Dossier des images](../README.md#dossier-des-images).
 - **Diagnostic** : remplacer `<fichier>` par la fin de l'`imageUrl` (par exemple `65b2143c-….png`). Dans Windows PowerShell 5.1, tapez `curl.exe` et `-o NUL` au lieu de `curl` et `-o /dev/null`.
 
   ```bash
