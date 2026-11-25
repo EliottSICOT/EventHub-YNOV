@@ -9,11 +9,11 @@ import {
   filtersFromSearchParams,
   hasActiveFilters,
   updateSearchParams,
-  type FilterKey,
+  type FilterChanges,
 } from './filters';
 import { Pagination } from './Pagination';
 
-/** Écran « Liste des événements » (US01, US02). */
+/** Écran « Liste des événements » (US01, US02, US10). */
 export function EventListPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const filters = useMemo(() => filtersFromSearchParams(searchParams), [searchParams]);
@@ -21,8 +21,7 @@ export function EventListPage() {
   const categories = useCategories();
 
   const changeFilters = useCallback(
-    (changes: Partial<Record<FilterKey, string | undefined>>) =>
-      setSearchParams((current) => updateSearchParams(current, changes)),
+    (changes: FilterChanges) => setSearchParams((current) => updateSearchParams(current, changes)),
     [setSearchParams],
   );
   // Page hors bornes (ancien lien, ?page=99…) : on remplace la page de l'URL par la dernière
