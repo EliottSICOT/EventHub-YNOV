@@ -291,6 +291,89 @@ Copiez ce modèle dans le bon groupe de la section [Symptômes](#symptômes). Le
 - **Date** : 2026-11-25
 - **Auteur** : Eliott Sicot
 
+### Front, images et fichiers
+
+#### L'image d'un événement ne s'affiche pas
+
+- **Symptôme** : sur la page détail, l'image est cassée (seul le texte alternatif « Visuel de … » apparaît), alors que l'événement a un `imageUrl` de la forme `/uploads/<uuid>.png`.
+- **Cause** : deux cas, reproduits tous les deux.
+  1. Le Front tourne avec une configuration Vite sans proxy `/uploads` : Vite renvoie alors sa propre page HTML (`200 text/html`), pas l'image. Le proxy existe depuis le commit `83f3d4d` ; un serveur Vite lancé avant ce commit ne le connaît pas.
+  2. Le fichier n'est pas dans le dossier `UPLOADS_DIR` servi par l'API : dossier changé dans `apps/api/.env`, ou autre machine (les images ne sont pas versionnées). L'API répond `404` avec une page HTML `Cannot GET /uploads/<uuid>.png`. Voir le README, section [Dossier des images](../README.md#dossier-des-images).
+- **Diagnostic** : remplacer `<fichier>` par la fin de l'`imageUrl` (par exemple `65b2143c-….png`). Dans Windows PowerShell 5.1, tapez `curl.exe` et `-o NUL` au lieu de `curl` et `-o /dev/null`.
+
+  ```bash
+  curl -s -o /dev/null -w "%{http_code} %{content_type}\n" http://localhost:5173/uploads/<fichier>
+  curl -s -o /dev/null -w "%{http_code} %{content_type}\n" http://localhost:3000/uploads/<fichier>
+  ls apps/api/uploads
+  ```
+
+  `200 text/html` sur 5173 mais `200 image/png` sur 3000 : cas 1. `404` sur 3000 : cas 2 (le fichier manque dans le dossier listé, ou `UPLOADS_DIR` vise un autre dossier).
+
+- **Correction** :
+  - cas 1 : mettre à jour la branche, vérifier le proxy, puis relancer `pnpm dev` ;
+
+    ```bash
+    git pull
+    grep -n "uploads" apps/web/vite.config.ts
+    ```
+
+    Attendu : une ligne `'/uploads': process.env.API_PROXY_TARGET ?? 'http://localhost:3000'`. Dans PowerShell, remplacez `grep -n "uploads"` par `Select-String -Path apps/web/vite.config.ts -Pattern uploads`.
+
+  - cas 2 : remettre dans `apps/api/.env` le `UPLOADS_DIR` qui contient les fichiers (par défaut `uploads`, soit `apps/api/uploads`), puis relancer l'API. Sur une autre machine, renvoyer l'image depuis le formulaire.
+
+- **Prévention** : relancer `pnpm dev` après un `git pull` qui modifie `apps/web/vite.config.ts`. Ne pas changer `UPLOADS_DIR` sans déplacer les fichiers.
+- **Source** : reproduit en local le 2026-11-25 (Vite sans proxy `/uploads` sur le port 5174 ; fichier absent du dossier servi par l'API). Stockage introduit par le commit `a1a3063`, proxy par le commit `83f3d4d`.
+- **Date** : 2026-11-25
+- **Auteur** : Eliott Sicot
+
+#### 'VITE_API_MOCKS' n'est pas reconnu en tant que commande interne ou externe
+
+- **Symptôme** : sous Windows, `pnpm --filter web dev:mock` s'arrête sur `'VITE_API_MOCKS' n'est pas reconnu en tant que commande interne ou externe, un programme exécutable ou un fichier de commandes.`
+- **Cause** : le script était écrit `VITE_API_MOCKS=true vite`. Cette syntaxe d'affectation devant une commande n'existe que dans les shells Unix ; sous Windows, pnpm lance les scripts avec cmd.
+- **Diagnostic** :
+
+  ```bash
+  grep -n "dev:mock" apps/web/package.json
+  ```
+
+  Dans PowerShell : `Select-String -Path apps/web/package.json -Pattern dev:mock`. La cause est confirmée si la ligne contient `VITE_API_MOCKS=true vite`. Depuis le commit `99a7ca8`, elle doit contenir `vite --mode mock`.
+
+- **Correction** : mettre la branche à jour (`git pull`). Le script devient `vite --mode mock`, et la variable est lue dans `apps/web/.env.mock`, sur toutes les plateformes.
+- **Prévention** : ne jamais écrire `VARIABLE=valeur commande` dans un script de `package.json`. Utiliser un mode Vite et son fichier `.env.<mode>`.
+- **Source** : commit `99a7ca8` (« fix(web): dev:mock compatible Windows via le mode Vite « mock » »). Message reproduit en local le 2026-11-25 avec `cmd /c "VITE_API_MOCKS=true vite"`.
+- **Date** : 2026-11-23
+- **Auteur** : Eliott Sicot
+
+#### Un fichier texte est vu comme binaire par Git (encodage UTF-16)
+
+- **Symptôme** : `git show --stat` affiche `README.md | Bin 0 -> 36 bytes` au lieu d'un nombre de lignes, aucun diff lisible n'apparaît, et le fichier s'affiche mal (caractères espacés ou illisibles) dans certains outils.
+- **Cause** : le fichier a été écrit en UTF-16 LE par Windows PowerShell 5.1. Sans réglage particulier, `>` et `Out-File` y écrivent en UTF-16 LE : les deux premiers octets sont `FF FE`. Le projet attend de l'UTF-8 (`.editorconfig` : `charset = utf-8`).
+- **Diagnostic** : `FF FE` en tête du fichier confirme la cause. Dans Git Bash :
+
+  ```bash
+  head -c 4 README.md | od -An -tx1
+  ```
+
+  Dans PowerShell :
+
+  ```powershell
+  Format-Hex README.md | Select-Object -First 1
+  ```
+
+  Attendu pour un fichier UTF-8 : `23 20 45 76` (`# Ev`). Le README du premier commit commençait par `ff fe 23 00`.
+
+- **Correction** (Git Bash) : convertir en UTF-8 sans BOM, puis vérifier.
+
+  ```bash
+  iconv -f UTF-16 -t UTF-8 README.md > README.md.utf8 && mv README.md.utf8 README.md
+  head -c 4 README.md | od -An -tx1
+  ```
+
+- **Prévention** : créer et modifier les fichiers dans l'éditeur, qui suit `.editorconfig`. Dans PowerShell 5.1, ne pas écrire de fichier du projet avec `>` ou `Out-File`.
+- **Source** : premier commit `ea537d8` (README en UTF-16 LE, 36 octets, vu comme binaire), corrigé en UTF-8 par le commit `0af97a3`. Comportement de PowerShell 5.1 reproduit en local le 2026-11-25 avec `powershell -NoProfile`.
+- **Date** : 2026-11-06
+- **Auteur** : Eliott Sicot
+
 ## Rituel
 
 | Moment                     | Action                         | Responsable                             |
