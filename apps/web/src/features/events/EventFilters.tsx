@@ -1,42 +1,39 @@
-import { useEffect, useId, useState } from 'react';
+import { useCallback, useId } from 'react';
 import type { Category } from '../../api/types';
-import { todayLocalDate, type EventFilters as Filters, type FilterKey } from './filters';
+import {
+  DEFAULT_SORT,
+  hasActiveFilters,
+  SORT_LABELS,
+  todayLocalDate,
+  type EventFilters as Filters,
+  type FilterChanges,
+} from './filters';
+import { useDebouncedText } from './useDebouncedText';
 
 interface EventFiltersProps {
   value: Filters;
   categories: Category[];
-  onChange: (changes: Partial<Record<FilterKey, string | undefined>>) => void;
+  onChange: (changes: FilterChanges) => void;
   onReset: () => void;
-  /** Délai avant d'appliquer la saisie de la ville. */
-  cityDebounceMs?: number;
+  /** Pause de frappe avant d'appliquer la recherche ou la ville. */
+  debounceMs?: number;
 }
 
-/** Barre de filtres du catalogue (US02) : période, catégorie, ville. */
+/** Barre du catalogue : recherche et tri (US10), période, catégorie et ville (US02). */
 export function EventFilters({
   value,
   categories,
   onChange,
   onReset,
-  cityDebounceMs = 300,
+  debounceMs = 300,
 }: EventFiltersProps) {
   const id = useId();
-  const [city, setCity] = useState(value.city ?? '');
-  const [syncedCity, setSyncedCity] = useState(value.city);
+  const applyCity = useCallback((city: string | undefined) => onChange({ city }), [onChange]);
+  const applySearch = useCallback((q: string | undefined) => onChange({ q }), [onChange]);
+  const [city, setCity] = useDebouncedText(value.city, applyCity, debounceMs);
+  const [search, setSearch] = useDebouncedText(value.q, applySearch, debounceMs);
 
-  // Garde le champ synchronisé avec l'URL (bouton Précédent, réinitialisation).
-  if (value.city !== syncedCity) {
-    setSyncedCity(value.city);
-    setCity(value.city ?? '');
-  }
-
-  useEffect(() => {
-    const next = city.trim() || undefined;
-    if (next === value.city) return;
-    const timer = setTimeout(() => onChange({ city: next }), cityDebounceMs);
-    return () => clearTimeout(timer);
-  }, [city, value.city, onChange, cityDebounceMs]);
-
-  const hasFilters = Boolean(value.from || value.to || value.category || value.city);
+  const canReset = hasActiveFilters(value) || value.sort !== undefined;
 
   return (
     <form
@@ -45,6 +42,31 @@ export function EventFilters({
       aria-label="Filtrer les événements"
       onSubmit={(e) => e.preventDefault()}
     >
+      <div className="filters__field filters__field--search">
+        <label htmlFor={`${id}-q`}>Rechercher</label>
+        <input
+          id={`${id}-q`}
+          type="search"
+          placeholder="Un mot du titre ou de la description"
+          value={search}
+          maxLength={100}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+      <div className="filters__field">
+        <label htmlFor={`${id}-sort`}>Trier par</label>
+        <select
+          id={`${id}-sort`}
+          value={value.sort ?? DEFAULT_SORT}
+          onChange={(e) => onChange({ sort: e.target.value })}
+        >
+          {Object.entries(SORT_LABELS).map(([sort, label]) => (
+            <option key={sort} value={sort}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </div>
       <div className="filters__field">
         <label htmlFor={`${id}-from`}>Du</label>
         <input
@@ -92,12 +114,7 @@ export function EventFilters({
           onChange={(e) => setCity(e.target.value)}
         />
       </div>
-      <button
-        type="button"
-        className="button button--ghost"
-        onClick={onReset}
-        disabled={!hasFilters}
-      >
+      <button type="button" className="button button--ghost" onClick={onReset} disabled={!canReset}>
         Réinitialiser
       </button>
     </form>
