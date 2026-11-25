@@ -12,6 +12,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const SansFiltre: Story = { args: { value: {} } };
+export const RechercheEtTri: Story = { args: { value: { q: 'jazz', sort: '-price' } } };
 export const FiltresActifs: Story = {
   args: { value: { from: '2026-12-01', to: '2026-12-31', category: 'concert', city: 'Lyon' } },
 };
