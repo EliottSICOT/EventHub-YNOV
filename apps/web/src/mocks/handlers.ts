@@ -34,8 +34,9 @@ function errorBody(statusCode: number, error: string, message: string, path: str
  * (filtres, pagination, 404) pour que le Front puisse avancer sans le Back.
  */
 export function createHandlers(events = defaultEvents, categories = defaultCategories) {
-  // Fixtures, plus les événements créés pendant la session (US08).
-  const allEvents = () => [...events, ...mockEvents.all()];
+  // Fixtures, plus les événements créés (US08) ou modifiés (US09) pendant la session.
+  const allEvents = () =>
+    [...events, ...mockEvents.all()].map((event) => mockEvents.withChanges(event));
 
   return [
     http.get('/api/v1/events', ({ query, request, response }) => {
@@ -67,6 +68,7 @@ export function createHandlers(events = defaultEvents, categories = defaultCateg
         .filter((e) => {
           const start = new Date(e.startsAt).getTime();
           return (
+            !e.isCancelled &&
             start >= fromTime &&
             start < toTime &&
             (!category || e.category.slug === category) &&
@@ -121,6 +123,7 @@ export function createHandlers(events = defaultEvents, categories = defaultCateg
       if (mockRegistrations.has(event.id, user.id)) {
         return conflict('Vous êtes déjà inscrit à cet événement');
       }
+      if (event.isCancelled) return conflict('Cet événement est annulé');
       if (new Date(event.startsAt).getTime() <= Date.now()) {
         return conflict('Cet événement est déjà passé');
       }
@@ -182,6 +185,16 @@ export function createHandlers(events = defaultEvents, categories = defaultCateg
         );
       }
       const event = allEvents().find((e) => e.id === registration.eventId);
+      if (event?.isCancelled) {
+        return response(409).json(
+          errorBody(
+            409,
+            'Conflict',
+            "Impossible d'annuler l'inscription à un événement annulé",
+            path,
+          ),
+        );
+      }
       if (event && new Date(event.startsAt).getTime() <= Date.now()) {
         return response(409).json(
           errorBody(
@@ -267,12 +280,118 @@ export function createHandlers(events = defaultEvents, categories = defaultCateg
         typeof URL.createObjectURL === 'function'
           ? URL.createObjectURL(image)
           : `/uploads/${crypto.randomUUID()}.${image.type === 'image/png' ? 'png' : 'jpg'}`;
-      const updated = mockEvents.update(event.id, { imageUrl }) ?? { ...event, imageUrl };
+      const updated = mockEvents.update(event, { imageUrl });
       return response(200).json(withRegistrations(updated));
+    }),
+
+    // US09 : modification et suppression réservées à l'organisateur de l'événement.
+    http.put('/api/v1/events/{id}', async ({ params, request, response }) => {
+      const path = new URL(request.url).pathname;
+      const user = mockAuth.currentUser;
+      if (!user) {
+        return response(401).json(errorBody(401, 'Unauthorized', 'Authentification requise', path));
+      }
+      if (user.role !== 'ORGANIZER') {
+        return response(403).json(
+          errorBody(
+            403,
+            'Forbidden',
+            "Vous n'avez pas les droits nécessaires pour cette action",
+            path,
+          ),
+        );
+      }
+      const event = allEvents().find((e) => e.id === params.id);
+      if (!event) {
+        return response(404).json(
+          errorBody(404, 'Not Found', "L'événement demandé n'existe pas", path),
+        );
+      }
+      if (event.organizer.id !== user.id) {
+        return response(403).json(
+          errorBody(
+            403,
+            'Forbidden',
+            "Seul l'organisateur de l'événement peut le modifier ou le supprimer",
+            path,
+          ),
+        );
+      }
+      const conflict = manageConflict(event);
+      if (conflict) return response(409).json(errorBody(409, 'Conflict', conflict, path));
+      const body = (await request.json()) as Record<string, unknown>;
+      const details = validateCreateEvent(body);
+      const category = categories.find((c) => c.id === body.categoryId);
+      if (details.length === 0 && !category) {
+        details.push({ field: 'categoryId', message: "La catégorie choisie n'existe pas" });
+      }
+      const registered = event.capacity - withRegistrations(event).remainingSeats;
+      if (details.length === 0 && (body.capacity as number) < registered) {
+        details.push({
+          field: 'capacity',
+          message: `La capacité ne peut pas être inférieure au nombre d'inscrits (${registered})`,
+        });
+      }
+      if (details.length > 0 || !category) {
+        return response(400).json(validationError(path, details));
+      }
+      const fields = buildEventFields(body, category);
+      const updated = mockEvents.update(event, {
+        ...fields,
+        // Places restantes de la fixture, avant les inscriptions simulées.
+        remainingSeats: fields.capacity - (event.capacity - event.remainingSeats),
+      });
+      return response(200).json(withRegistrations(updated));
+    }),
+
+    http.delete('/api/v1/events/{id}', ({ params, request, response }) => {
+      const path = new URL(request.url).pathname;
+      const user = mockAuth.currentUser;
+      if (!user) {
+        return response(401).json(errorBody(401, 'Unauthorized', 'Authentification requise', path));
+      }
+      if (user.role !== 'ORGANIZER') {
+        return response(403).json(
+          errorBody(
+            403,
+            'Forbidden',
+            "Vous n'avez pas les droits nécessaires pour cette action",
+            path,
+          ),
+        );
+      }
+      const event = allEvents().find((e) => e.id === params.id);
+      if (!event) {
+        return response(404).json(
+          errorBody(404, 'Not Found', "L'événement demandé n'existe pas", path),
+        );
+      }
+      if (event.organizer.id !== user.id) {
+        return response(403).json(
+          errorBody(
+            403,
+            'Forbidden',
+            "Seul l'organisateur de l'événement peut le modifier ou le supprimer",
+            path,
+          ),
+        );
+      }
+      const conflict = manageConflict(event);
+      if (conflict) return response(409).json(errorBody(409, 'Conflict', conflict, path));
+      mockEvents.update(event, { isCancelled: true });
+      return response(204).empty();
     }),
 
     ...authHandlers,
   ];
+}
+
+/** Raison pour laquelle un événement ne peut plus être modifié ni supprimé (US09). */
+function manageConflict(event: EventDetail): string | undefined {
+  if (event.isCancelled) return 'Cet événement est annulé';
+  if (new Date(event.startsAt).getTime() <= Date.now())
+    return 'Impossible de modifier ou de supprimer un événement qui a déjà commencé';
+  return undefined;
 }
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -355,14 +474,9 @@ function validateCreateEvent(body: Record<string, unknown>): FieldError[] {
   return details;
 }
 
-function buildCreatedEvent(
-  body: Record<string, unknown>,
-  category: Category,
-  user: User,
-): EventDetail {
-  const capacity = body.capacity as number;
+/** Champs modifiables d'un événement, à partir d'un corps déjà validé. */
+function buildEventFields(body: Record<string, unknown>, category: Category) {
   return {
-    id: crypto.randomUUID(),
     title: asString(body.title).trim(),
     description: asString(body.description).trim(),
     startsAt: new Date(asString(body.startsAt)).toISOString(),
@@ -370,12 +484,25 @@ function buildCreatedEvent(
     venue: asString(body.venue).trim(),
     address: asString(body.address).trim() || null,
     city: asString(body.city).trim(),
-    capacity,
+    capacity: body.capacity as number,
     priceCents: body.priceCents as number,
-    remainingSeats: capacity,
-    isFull: false,
-    imageUrl: null,
     category,
+  };
+}
+
+function buildCreatedEvent(
+  body: Record<string, unknown>,
+  category: Category,
+  user: User,
+): EventDetail {
+  const fields = buildEventFields(body, category);
+  return {
+    ...fields,
+    id: crypto.randomUUID(),
+    remainingSeats: fields.capacity,
+    isFull: false,
+    isCancelled: false,
+    imageUrl: null,
     organizer: { id: user.id, name: `${user.firstName} ${user.lastName}` },
   };
 }
