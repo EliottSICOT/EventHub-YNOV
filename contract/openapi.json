@@ -1186,6 +1186,120 @@
         ]
       }
     },
+    "/api/v1/events/{id}/registrations.csv": {
+      "get": {
+        "description": "US13 : réservé à l'organisateur de l'événement. Fichier lisible tel quel dans Excel en français : BOM UTF-8, séparateur `;`, fins de ligne CRLF. Colonnes `Nom;Prénom;Email;Date d'inscription`, dates `JJ/MM/AAAA HH:mm` à l'heure de Paris, inscrits triés par date d'inscription. Une valeur qui commence par `=`, `+`, `-`, `@`, une tabulation ou un retour chariot est préfixée d'une apostrophe (injection de formules). Sans inscrit, le fichier ne contient que la ligne d'en-tête. Nom du fichier : `inscrits-<titre-en-slug>-<AAAA-MM-JJ>.csv`, dans `Content-Disposition`.",
+        "operationId": "exportRegistrations",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Identifiant de l'événement",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Fichier CSV des inscrits",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "Nom;Prénom;Email;Date d'inscription\r\nDupont;Léa;lea.dupont@example.com;20/11/2026 10:15\r\nLefèvre;Éloïse;eloise.lefevre@example.com;21/11/2026 18:42\r\n"
+              }
+            },
+            "headers": {
+              "Content-Disposition": {
+                "description": "Pièce jointe : `filename` en ASCII, `filename*` en UTF-8 avec les accents du titre",
+                "schema": {
+                  "type": "string",
+                  "example": "attachment; filename=\"inscrits-nuit-du-jazz-2026-12-05.csv\"; filename*=UTF-8''inscrits-nuit-du-jazz-2026-12-05.csv"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Pas de session, ou session expirée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "statusCode": 401,
+                  "error": "Unauthorized",
+                  "message": "Authentification requise",
+                  "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11/registrations.csv",
+                  "timestamp": "2026-11-20T10:33:21.774Z"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Participant, ou organisateur d'un autre événement",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "examples": {
+                  "notOrganizer": {
+                    "summary": "Autre organisateur",
+                    "value": {
+                      "statusCode": 403,
+                      "error": "Forbidden",
+                      "message": "Seul l'organisateur de l'événement peut exporter la liste de ses inscrits",
+                      "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11/registrations.csv",
+                      "timestamp": "2026-11-20T10:33:21.774Z"
+                    }
+                  },
+                  "participant": {
+                    "summary": "Participant",
+                    "value": {
+                      "statusCode": 403,
+                      "error": "Forbidden",
+                      "message": "Vous n'avez pas les droits nécessaires pour cette action",
+                      "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11/registrations.csv",
+                      "timestamp": "2026-11-20T10:33:21.774Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Événement inconnu",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "statusCode": 404,
+                  "error": "Not Found",
+                  "message": "L'événement demandé n'existe pas",
+                  "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11/registrations.csv",
+                  "timestamp": "2026-11-20T10:33:21.774Z"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Exporter les inscrits en CSV",
+        "tags": [
+          "registrations"
+        ]
+      }
+    },
     "/api/v1/registrations/me": {
       "get": {
         "description": "US06 : inscriptions de l'utilisateur connecté, de l'événement le plus proche au plus lointain, passées comprises (l'annulation n'est possible que pour les événements à venir). Un événement supprimé par son organisateur reste listé, avec `isCancelled` à vrai.",

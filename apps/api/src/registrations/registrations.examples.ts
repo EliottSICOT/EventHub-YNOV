@@ -5,7 +5,7 @@ import type { RegistrationDto } from './dto/registration.dto.js';
 import type { UserRegistrationDto } from './dto/user-registration.dto.js';
 import { REGISTRATION_MESSAGES } from './registrations.constants.js';
 
-/** Exemples du contrat OpenAPI des routes d'inscription (US05, US06). */
+/** Exemples du contrat OpenAPI des routes d'inscription (US05, US06, US13). */
 
 const EVENT_ID = '3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11';
 const PATH = `/api/v1/events/${EVENT_ID}/registrations`;
@@ -81,3 +81,36 @@ export const cancelPastExample = error(
   REGISTRATION_MESSAGES.cancelPast,
   CANCEL_PATH,
 );
+
+/** Exemples du contrat de l'export des inscrits en CSV (US13). */
+
+const EXPORT_PATH = `/api/v1/events/${EVENT_ID}/registrations.csv`;
+
+/** Le fichier réel commence par un BOM UTF-8, omis ici pour garder l'exemple lisible. */
+export const registrationsCsvExample =
+  "Nom;Prénom;Email;Date d'inscription\r\n" +
+  'Dupont;Léa;lea.dupont@example.com;20/11/2026 10:15\r\n' +
+  'Lefèvre;Éloïse;eloise.lefevre@example.com;21/11/2026 18:42\r\n';
+export const registrationsCsvDispositionExample =
+  'attachment; filename="inscrits-nuit-du-jazz-2026-12-05.csv"; ' +
+  "filename*=UTF-8''inscrits-nuit-du-jazz-2026-12-05.csv";
+
+export const exportUnauthenticatedExample = error(
+  401,
+  'Unauthorized',
+  AUTH_MESSAGES.unauthenticated,
+  EXPORT_PATH,
+);
+export const exportNotOrganizerExample = error(
+  403,
+  'Forbidden',
+  REGISTRATION_MESSAGES.exportNotOrganizer,
+  EXPORT_PATH,
+);
+export const exportParticipantExample = error(
+  403,
+  'Forbidden',
+  AUTH_MESSAGES.forbidden,
+  EXPORT_PATH,
+);
+export const exportNotFoundExample = error(404, 'Not Found', EVENT_NOT_FOUND_MESSAGE, EXPORT_PATH);

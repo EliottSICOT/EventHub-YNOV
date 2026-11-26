@@ -12,6 +12,7 @@ import { mockAuth } from './auth';
 import { mockEvents } from './events';
 import { categories as defaultCategories, events as defaultEvents } from './fixtures';
 import { mockRegistrations } from './registrations';
+import { mockRegistrationsCsv } from './registrationsCsv';
 
 const http = createOpenApiHttp<paths>({ baseUrl: '*' });
 
@@ -419,6 +420,52 @@ export function createHandlers(events = defaultEvents, categories = defaultCateg
       if (conflict) return response(409).json(errorBody(409, 'Conflict', conflict, path));
       mockEvents.update(event, { isCancelled: true });
       return response(204).empty();
+    }),
+
+    // US13 : export CSV des inscrits simulés, réservé à l'organisateur de l'événement.
+    http.get('/api/v1/events/{id}/registrations.csv', ({ params, request, response }) => {
+      const path = new URL(request.url).pathname;
+      const user = mockAuth.currentUser;
+      if (!user) {
+        return response(401).json(errorBody(401, 'Unauthorized', 'Authentification requise', path));
+      }
+      if (user.role !== 'ORGANIZER') {
+        return response(403).json(
+          errorBody(
+            403,
+            'Forbidden',
+            "Vous n'avez pas les droits nécessaires pour cette action",
+            path,
+          ),
+        );
+      }
+      const event = allEvents().find((e) => e.id === params.id);
+      if (!event) {
+        return response(404).json(
+          errorBody(404, 'Not Found', "L'événement demandé n'existe pas", path),
+        );
+      }
+      if (event.organizer.id !== user.id) {
+        return response(403).json(
+          errorBody(
+            403,
+            'Forbidden',
+            "Seul l'organisateur de l'événement peut exporter la liste de ses inscrits",
+            path,
+          ),
+        );
+      }
+      const rows = mockRegistrations.forEvent(event.id).flatMap(({ userId, createdAt }) => {
+        const person = mockAuth.findById(userId);
+        return person ? [{ ...person, createdAt }] : [];
+      });
+      const csv = mockRegistrationsCsv(event, rows);
+      return response(200).text(csv.content, {
+        headers: {
+          'Content-Type': 'text/csv; charset=utf-8',
+          'Content-Disposition': csv.contentDisposition,
+        },
+      });
     }),
 
     ...authHandlers,

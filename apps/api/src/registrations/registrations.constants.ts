@@ -7,4 +7,5 @@ export const REGISTRATION_MESSAGES = {
   notOwner: "Vous ne pouvez pas annuler l'inscription d'un autre participant",
   cancelPast: "Impossible d'annuler l'inscription à un événement passé",
   cancelCancelled: "Impossible d'annuler l'inscription à un événement annulé",
+  exportNotOrganizer: "Seul l'organisateur de l'événement peut exporter la liste de ses inscrits",
 } as const;

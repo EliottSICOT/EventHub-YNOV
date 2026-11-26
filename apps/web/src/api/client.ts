@@ -6,10 +6,10 @@ import type { ApiErrorBody } from './types';
  * En dev, Vite redirige /api vers l'API (voir vite.config.ts) : l'URL de base est donc l'origine du Front.
  * VITE_API_URL permet de viser une API servie ailleurs.
  */
-const baseUrl = import.meta.env.VITE_API_URL || globalThis.location?.origin;
+export const apiBaseUrl: string = import.meta.env.VITE_API_URL || globalThis.location?.origin;
 
 export const api = createClient<paths>({
-  baseUrl,
+  baseUrl: apiBaseUrl,
   credentials: 'include',
   // Résolu à chaque appel (et non à la création) pour que MSW puisse intercepter fetch dans les tests.
   fetch: (request) => globalThis.fetch(request),
