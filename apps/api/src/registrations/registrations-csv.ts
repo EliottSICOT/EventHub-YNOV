@@ -24,7 +24,7 @@ export interface RegistrationsCsv {
 
 export const REGISTRATIONS_CSV_HEADER = "Nom;Prénom;Email;Date d'inscription";
 
-const BOM = '﻿';
+const BOM = String.fromCharCode(0xfeff);
 const SEPARATOR = ';';
 const CRLF = '\r\n';
 const TIME_ZONE = 'Europe/Paris';

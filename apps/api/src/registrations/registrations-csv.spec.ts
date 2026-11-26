@@ -5,7 +5,7 @@ import {
   toRegistrationsCsv,
 } from './registrations-csv.js';
 
-const BOM = '﻿';
+const BOM = String.fromCharCode(0xfeff);
 const CRLF = '\r\n';
 
 const event = { title: 'Nuit du jazz', startsAt: new Date('2026-12-05T19:00:00.000Z') };
