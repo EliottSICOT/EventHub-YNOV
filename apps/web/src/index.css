@@ -615,7 +615,18 @@ a.button {
 .event-actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-start;
   gap: 8px;
+}
+/* Export CSV des inscrits (US13) : le message s'affiche sous le bouton. */
+.export-registrations {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+.export-registrations .notice {
+  margin: 0;
 }
 .detail__actions:empty {
   display: none;
