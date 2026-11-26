@@ -1,10 +1,10 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { UploadStorage } from '../uploads/uploads.js';
 import type { EventDetailDto } from './dto/event-detail.dto.js';
 import { IMAGE_MESSAGES, type UploadedImage, validateImage } from './event-image.js';
+import { assertEventOrganizer } from './event-ownership.js';
 import { eventDetailInclude, toEventDetail } from './events.mapper.js';
-import { EVENT_NOT_FOUND_MESSAGE } from './events.service.js';
 
 /** Image d'un événement (US08) : réservée à son organisateur, stockée dans `UPLOADS_DIR`. */
 @Injectable()
@@ -23,8 +23,7 @@ export class EventImagesService {
       where: { id: eventId },
       select: { organizerId: true, imageUrl: true },
     });
-    if (!event) throw new NotFoundException(EVENT_NOT_FOUND_MESSAGE);
-    if (event.organizerId !== userId) throw new ForbiddenException(IMAGE_MESSAGES.notOrganizer);
+    assertEventOrganizer(event, userId, IMAGE_MESSAGES.notOrganizer);
 
     const extension = validateImage(image);
     const imageUrl = await this.storage.save(image!.buffer, extension);

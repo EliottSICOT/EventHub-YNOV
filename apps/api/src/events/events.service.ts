@@ -1,9 +1,4 @@
-import {
-  ConflictException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { ValidationException } from '../common/errors/validation.exception.js';
 import type { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -13,7 +8,8 @@ import type { EventSummaryDto } from './dto/event-summary.dto.js';
 import type { ListEventsQueryDto } from './dto/list-events-query.dto.js';
 import type { PaginatedEventsDto } from './dto/paginated-events.dto.js';
 import type { UpdateEventDto } from './dto/update-event.dto.js';
-import { MANAGE_EVENT_MESSAGES } from './events.constants.js';
+import { assertEventOrganizer } from './event-ownership.js';
+import { EVENT_NOT_FOUND_MESSAGE, MANAGE_EVENT_MESSAGES } from './events.constants.js';
 import {
   eventDetailInclude,
   eventSummaryInclude,
@@ -22,7 +18,7 @@ import {
 } from './events.mapper.js';
 import { catalogueCountSql, cataloguePageSql } from './events.search.js';
 
-export const EVENT_NOT_FOUND_MESSAGE = "L'événement demandé n'existe pas";
+export { EVENT_NOT_FOUND_MESSAGE } from './events.constants.js';
 export const CATEGORY_NOT_FOUND_MESSAGE = "La catégorie choisie n'existe pas";
 
 @Injectable()
@@ -162,12 +158,10 @@ async function lockManageableEvent(
   now: Date,
 ) {
   const [event] = await tx.$queryRaw<
-    { organizer_id: string; starts_at: Date; cancelled_at: Date | null }[]
-  >`SELECT organizer_id, starts_at, cancelled_at FROM events WHERE id = ${id} FOR UPDATE`;
-  if (!event) throw new NotFoundException(EVENT_NOT_FOUND_MESSAGE);
-  if (event.organizer_id !== userId) {
-    throw new ForbiddenException(MANAGE_EVENT_MESSAGES.notOrganizer);
-  }
-  if (event.cancelled_at) throw new ConflictException(MANAGE_EVENT_MESSAGES.alreadyCancelled);
-  if (event.starts_at <= now) throw new ConflictException(MANAGE_EVENT_MESSAGES.past);
+    { organizerId: string; startsAt: Date; cancelledAt: Date | null }[]
+  >`SELECT organizer_id AS "organizerId", starts_at AS "startsAt", cancelled_at AS "cancelledAt"
+    FROM events WHERE id = ${id} FOR UPDATE`;
+  assertEventOrganizer(event, userId, MANAGE_EVENT_MESSAGES.notOrganizer);
+  if (event.cancelledAt) throw new ConflictException(MANAGE_EVENT_MESSAGES.alreadyCancelled);
+  if (event.startsAt <= now) throw new ConflictException(MANAGE_EVENT_MESSAGES.past);
 }
