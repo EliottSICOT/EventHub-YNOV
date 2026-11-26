@@ -88,22 +88,23 @@ Toutes les erreurs suivent `ApiErrorDto` :
 
 ## Endpoints
 
-| Méthode | Chemin                              | Story            | Description                                                                                                                                                                |
-| ------- | ----------------------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| GET     | `/api/v1/events`                    | US01, US02, US10 | Catalogue paginé (`page`, `pageSize` ≤ 50), filtres combinables `from`, `to`, `category`, `city`, recherche `q` et tri `sort`                                              |
-| GET     | `/api/v1/events/{id}`               | US03             | Détail : description, organisateur, places restantes ; 404 si inconnu                                                                                                      |
-| GET     | `/api/v1/categories`                | US02             | Catégories pour le filtre                                                                                                                                                  |
-| POST    | `/api/v1/events`                    | US08             | Création d'un événement par un organisateur (JSON) ; 201 avec le détail, 400 avec `details`, 401, 403 pour un participant                                                  |
-| POST    | `/api/v1/events/{id}/image`         | US08             | Image de l'événement (multipart, champ `image`, JPG ou PNG, 2 Mo maximum) ; 200, 400, 401, 403 (pas l'organisateur), 404                                                   |
-| PUT     | `/api/v1/events/{id}`               | US09             | Modification par l'organisateur de l'événement, mêmes validations que la création ; 400 (dont capacité sous le nombre d'inscrits), 401, 403, 404, 409 (annulé ou commencé) |
-| DELETE  | `/api/v1/events/{id}`               | US09             | Suppression par l'organisateur de l'événement ; 204, 401, 403, 404, 409 (déjà annulé ou commencé)                                                                          |
-| POST    | `/api/v1/auth/sign-up`              | US04             | Création d'un compte participant ; 400 avec `details`, 409 si l'email est pris                                                                                             |
-| POST    | `/api/v1/auth/sign-in`              | US04             | Connexion : pose le cookie de session ; 401 générique si les identifiants sont faux                                                                                        |
-| POST    | `/api/v1/auth/sign-out`             | US04             | Déconnexion : supprime la session en base et efface le cookie ; 204                                                                                                        |
-| GET     | `/api/v1/auth/me`                   | US04             | Utilisateur connecté (id, email, prénom, nom, rôle) ; 401 sans session                                                                                                     |
-| POST    | `/api/v1/events/{id}/registrations` | US05, US11       | Inscription de l'utilisateur connecté, en transaction ; 201 avec les places restantes, 401, 404, 409 (déjà inscrit, complet ou passé)                                      |
-| GET     | `/api/v1/registrations/me`          | US06, US07       | Mes inscriptions (passées comprises), triées par date d'événement ; 401 sans session                                                                                       |
-| DELETE  | `/api/v1/registrations/{id}`        | US06             | Annulation d'une inscription, la place est libérée ; 204, 401, 403 (pas la mienne), 404, 409 (événement passé)                                                             |
+| Méthode | Chemin                                  | Story            | Description                                                                                                                                                                |
+| ------- | --------------------------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET     | `/api/v1/events`                        | US01, US02, US10 | Catalogue paginé (`page`, `pageSize` ≤ 50), filtres combinables `from`, `to`, `category`, `city`, recherche `q` et tri `sort`                                              |
+| GET     | `/api/v1/events/{id}`                   | US03             | Détail : description, organisateur, places restantes ; 404 si inconnu                                                                                                      |
+| GET     | `/api/v1/categories`                    | US02             | Catégories pour le filtre                                                                                                                                                  |
+| POST    | `/api/v1/events`                        | US08             | Création d'un événement par un organisateur (JSON) ; 201 avec le détail, 400 avec `details`, 401, 403 pour un participant                                                  |
+| POST    | `/api/v1/events/{id}/image`             | US08             | Image de l'événement (multipart, champ `image`, JPG ou PNG, 2 Mo maximum) ; 200, 400, 401, 403 (pas l'organisateur), 404                                                   |
+| PUT     | `/api/v1/events/{id}`                   | US09             | Modification par l'organisateur de l'événement, mêmes validations que la création ; 400 (dont capacité sous le nombre d'inscrits), 401, 403, 404, 409 (annulé ou commencé) |
+| DELETE  | `/api/v1/events/{id}`                   | US09             | Suppression par l'organisateur de l'événement ; 204, 401, 403, 404, 409 (déjà annulé ou commencé)                                                                          |
+| POST    | `/api/v1/auth/sign-up`                  | US04             | Création d'un compte participant ; 400 avec `details`, 409 si l'email est pris                                                                                             |
+| POST    | `/api/v1/auth/sign-in`                  | US04             | Connexion : pose le cookie de session ; 401 générique si les identifiants sont faux                                                                                        |
+| POST    | `/api/v1/auth/sign-out`                 | US04             | Déconnexion : supprime la session en base et efface le cookie ; 204                                                                                                        |
+| GET     | `/api/v1/auth/me`                       | US04             | Utilisateur connecté (id, email, prénom, nom, rôle) ; 401 sans session                                                                                                     |
+| POST    | `/api/v1/events/{id}/registrations`     | US05, US11       | Inscription de l'utilisateur connecté, en transaction ; 201 avec les places restantes, 401, 404, 409 (déjà inscrit, complet ou passé)                                      |
+| GET     | `/api/v1/events/{id}/registrations.csv` | US13             | Export CSV des inscrits par l'organisateur de l'événement (BOM UTF-8, `;`, CRLF) ; 200 `text/csv`, 401, 403 (participant ou autre organisateur), 404                       |
+| GET     | `/api/v1/registrations/me`              | US06, US07       | Mes inscriptions (passées comprises), triées par date d'événement ; 401 sans session                                                                                       |
+| DELETE  | `/api/v1/registrations/{id}`            | US06             | Annulation d'une inscription, la place est libérée ; 204, 401, 403 (pas la mienne), 404, 409 (événement passé)                                                             |
 
 Le catalogue n'affiche jamais d'événement passé : sans `from`, il part de maintenant, et un `from` dans le passé est ramené à maintenant. Une date seule dans `to` inclut toute la journée. Côté Front, le champ « Du » n'accepte pas de date passée, et une page au-delà de la dernière (`?page=99`) est remplacée par la dernière page existante.
 
@@ -131,6 +132,14 @@ Les images sont écrites dans `UPLOADS_DIR` (par défaut `apps/api/uploads`, ign
 - `DELETE /registrations/{id}` supprime l'inscription de son propriétaire uniquement (403 sinon) et refuse les événements passés (409) : les places restantes se déduisent des inscriptions, la place est donc libérée sans autre écriture.
 - La contrainte unique `(event_id, user_id)` garantit une seule inscription par utilisateur ; les refus (déjà inscrit, complet, passé) renvoient 409 avec un message distinct.
 - E-mail de confirmation (US11) : envoyé après la validation de la transaction, sans retarder la réponse. Un échec est journalisé (sans l'adresse du participant) et l'inscription reste valide.
+
+### Export des inscrits en CSV (US13)
+
+- `GET /events/{id}/registrations.csv` est réservé au rôle `ORGANIZER` et à l'organisateur de l'événement, avec le même contrôle que la modification et l'image (`assertEventOrganizer` : 404 si l'événement est inconnu, puis 403). Un événement annulé ou passé reste exportable.
+- Le fichier s'ouvre tel quel dans Excel en français : BOM UTF-8 (sans lui, Excel lit le fichier en Windows-1252 et casse les accents), séparateur `;`, fins de ligne CRLF. Colonnes `Nom;Prénom;Email;Date d'inscription`, dates `JJ/MM/AAAA HH:mm` à l'heure de Paris, inscrits triés par date d'inscription. Sans inscrit, seule la ligne d'en-tête est renvoyée.
+- Injection de formules : une valeur qui commence par `=`, `+`, `-`, `@`, une tabulation ou un retour chariot est préfixée d'une apostrophe, et Excel l'affiche comme du texte. Une valeur qui contient `;`, `"` ou un saut de ligne est mise entre guillemets.
+- Nom du fichier : `inscrits-<titre-en-slug>-<AAAA-MM-JJ de l'événement>.csv`. `Content-Disposition` donne `filename*` en UTF-8, avec les accents du titre, et `filename` en ASCII pour les autres clients. Le CORS expose cet en-tête, pour que le Front le lise hors du proxy Vite.
+- Côté Front, `ExportRegistrationsButton` (dans `features/organizer`) télécharge le fichier et l'enregistre sous ce nom. En attendant le tableau de bord organisateur (US12), il est affiché dans les actions de l'organisateur sur la page détail ; il ne prend que l'id de l'événement, pour resservir tel quel dans le tableau de bord.
 
 ### Recherche et tri du catalogue
 
@@ -172,12 +181,12 @@ Les tests e2e créent la base `eventhub_test` si besoin et refusent de tourner s
 
 ## Avancement
 
-| Sprint | Stories              | État                            |
-| ------ | -------------------- | ------------------------------- |
-| 1      | US01, US02, US03     | Livré                           |
-| 2      | US04, US05           | Livré                           |
-| 3      | US06 à US09          | Livré                           |
-| 4      | US10 à US13 (+ US14) | En cours : US10 et US11 livrées |
+| Sprint | Stories              | État                                  |
+| ------ | -------------------- | ------------------------------------- |
+| 1      | US01, US02, US03     | Livré                                 |
+| 2      | US04, US05           | Livré                                 |
+| 3      | US06 à US09          | Livré                                 |
+| 4      | US10 à US13 (+ US14) | En cours : US10, US11 et US13 livrées |
 
 Runbook de l'équipe (#58) : [docs/runbook.md](docs/runbook.md), avec « Démarrer en local », 9 symptômes documentés et le rituel de mise à jour.
 
