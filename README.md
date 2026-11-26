@@ -188,6 +188,6 @@ Les tests e2e créent la base `eventhub_test` si besoin et refusent de tourner s
 | 3      | US06 à US09          | Livré                                 |
 | 4      | US10 à US13 (+ US14) | En cours : US10, US11 et US13 livrées |
 
-Runbook de l'équipe (#58) : [docs/runbook.md](docs/runbook.md), avec « Démarrer en local », 11 symptômes documentés et le rituel de mise à jour.
+Runbook de l'équipe (#58) : [docs/runbook.md](docs/runbook.md), avec « Démarrer en local », 12 symptômes documentés et le rituel de mise à jour.
 
 Le schéma Prisma contient déjà `users` et `registrations` : les places restantes se calculent à partir des inscriptions.

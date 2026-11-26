@@ -163,6 +163,37 @@ Copiez ce modèle dans le bon groupe de la section [Symptômes](#symptômes). Le
 - **Date** : 2026-11-24
 - **Auteur** : Eliott Sicot
 
+#### pnpm format:check signale des dizaines de fichiers sous Windows
+
+- **Symptôme** : en local sous Windows, `pnpm format:check` liste une cinquantaine de fichiers, y compris des fichiers que l'on n'a pas touchés, puis `Code style issues found in 52 files. Run Prettier with --write to fix.` La même étape passe en CI.
+- **Cause** : avec `core.autocrlf=true` (réglage par défaut de Git for Windows), Git écrit les fichiers en CRLF dans la copie de travail, alors que le dépôt les stocke en LF. Prettier attend des fins de ligne LF (`endOfLine` vaut `lf` par défaut) : il signale chaque fichier en CRLF. La CI, sous Linux, extrait les fichiers en LF.
+- **Diagnostic** : `i/lf w/crlf` (LF dans le dépôt, CRLF sur le disque) et une vérification qui passe en ignorant les fins de ligne confirment la cause.
+
+  ```bash
+  git config core.autocrlf
+  git ls-files --eol apps/web/src/api/types.ts
+  npx prettier --check --end-of-line auto "apps/*/src/**/*.{ts,tsx,css}" "apps/*/test/**/*.ts"
+  ```
+
+  Attendu : `true`, `i/lf w/crlf`, puis `All matched files use Prettier code style!`.
+
+- **Correction** : ⚠️ `git reset --hard` efface les modifications non commitées. À lancer seulement avec un `git status` vide.
+
+  ```bash
+  git status
+  git config core.autocrlf input
+  git rm -rq --cached .
+  git reset -q --hard
+  pnpm format:check
+  ```
+
+  `core.autocrlf input` garde les fichiers en LF sur le disque et convertit en LF un éventuel CRLF au moment du commit.
+
+- **Prévention** : régler `core.autocrlf input` juste après le clone. Pour ne plus dépendre du réglage de chacun, un `.gitattributes` avec `* text=auto eol=lf` imposerait le LF à tout le monde.
+- **Source** : rencontré le 2026-11-26 pendant US13 (`pnpm format:check` en échec sur la branche et sur `main`, alors que le contenu commité passe Prettier). Correction testée le même jour sur un clone jetable.
+- **Date** : 2026-11-26
+- **Auteur** : Eliott Sicot
+
 ### Installation et base de données
 
 #### Cannot find matching keyid après corepack enable
