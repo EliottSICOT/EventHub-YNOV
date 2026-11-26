@@ -32,6 +32,11 @@ export function configureApp(app: INestApplication, frontUrl?: string) {
   if (frontUrl) {
     // Le cookie de session exige credentials: true, donc une origine explicite (jamais '*').
     // En dev, Vite proxifie /api : le Front et l'API partagent déjà la même origine.
-    app.enableCors({ origin: frontUrl, credentials: true });
+    // Content-Disposition porte le nom du fichier CSV des inscrits (US13), lu par le Front.
+    app.enableCors({
+      origin: frontUrl,
+      credentials: true,
+      exposedHeaders: ['Content-Disposition'],
+    });
   }
 }

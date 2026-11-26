@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { assertEventOrganizer } from '../events/event-ownership.js';
 import { eventSummaryInclude, remainingSeats, toEventSummary } from '../events/events.mapper.js';
 import { EVENT_NOT_FOUND_MESSAGE } from '../events/events.service.js';
 import { Prisma } from '../generated/prisma/client.js';
@@ -11,6 +12,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import type { RegistrationDto } from './dto/registration.dto.js';
 import type { UserRegistrationDto } from './dto/user-registration.dto.js';
 import { RegistrationMailer } from './registration-mailer.service.js';
+import { type RegistrationsCsv, toRegistrationsCsv } from './registrations-csv.js';
 import { REGISTRATION_MESSAGES } from './registrations.constants.js';
 
 @Injectable()
@@ -84,6 +86,29 @@ export class RegistrationsService {
       }
       throw error;
     }
+  }
+
+  /**
+   * CSV des inscrits de l'événement `eventId` (US13), réservé à son organisateur `userId` :
+   * 404 si l'événement n'existe pas, 403 s'il appartient à un autre organisateur.
+   * Un événement annulé reste exportable : l'organisateur peut avoir à prévenir ses inscrits.
+   */
+  async exportCsv(eventId: string, userId: string): Promise<RegistrationsCsv> {
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+      select: { title: true, startsAt: true, organizerId: true },
+    });
+    assertEventOrganizer(event, userId, REGISTRATION_MESSAGES.exportNotOrganizer);
+
+    const registrations = await this.prisma.registration.findMany({
+      where: { eventId },
+      select: {
+        createdAt: true,
+        user: { select: { lastName: true, firstName: true, email: true } },
+      },
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+    });
+    return toRegistrationsCsv(event, registrations);
   }
 
   /** Inscriptions de `userId`, de l'événement le plus proche au plus lointain (US06). */

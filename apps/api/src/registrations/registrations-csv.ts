@@ -125,3 +125,5 @@ export function toRegistrationsCsv(
 export function contentDisposition({ filename, asciiFilename }: RegistrationsCsv): string {
   return `attachment; filename="${asciiFilename}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
 }
+
+export const REGISTRATIONS_CSV_TYPE = 'text/csv; charset=utf-8';

@@ -193,6 +193,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/events/{id}/registrations.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Exporter les inscrits en CSV
+         * @description US13 : réservé à l'organisateur de l'événement. Fichier lisible tel quel dans Excel en français : BOM UTF-8, séparateur `;`, fins de ligne CRLF. Colonnes `Nom;Prénom;Email;Date d'inscription`, dates `JJ/MM/AAAA HH:mm` à l'heure de Paris, inscrits triés par date d'inscription. Une valeur qui commence par `=`, `+`, `-`, `@`, une tabulation ou un retour chariot est préfixée d'une apostrophe (injection de formules). Sans inscrit, le fichier ne contient que la ligne d'en-tête. Nom du fichier : `inscrits-<titre-en-slug>-<AAAA-MM-JJ>.csv`, dans `Content-Disposition`.
+         */
+        get: operations["exportRegistrations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/registrations/me": {
         parameters: {
             query?: never;
@@ -1352,6 +1372,81 @@ export interface operations {
                      *       "error": "Conflict",
                      *       "message": "Vous êtes déjà inscrit à cet événement",
                      *       "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11/registrations",
+                     *       "timestamp": "2026-11-20T10:33:21.774Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    exportRegistrations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identifiant de l'événement */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Fichier CSV des inscrits */
+            200: {
+                headers: {
+                    /** @description Pièce jointe : `filename` en ASCII, `filename*` en UTF-8 avec les accents du titre */
+                    "Content-Disposition"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example Nom;Prénom;Email;Date d'inscription
+                     *     Dupont;Léa;lea.dupont@example.com;20/11/2026 10:15
+                     *     Lefèvre;Éloïse;eloise.lefevre@example.com;21/11/2026 18:42
+                     */
+                    "text/csv": string;
+                };
+            };
+            /** @description Pas de session, ou session expirée */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "statusCode": 401,
+                     *       "error": "Unauthorized",
+                     *       "message": "Authentification requise",
+                     *       "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11/registrations.csv",
+                     *       "timestamp": "2026-11-20T10:33:21.774Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Participant, ou organisateur d'un autre événement */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Événement inconnu */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "statusCode": 404,
+                     *       "error": "Not Found",
+                     *       "message": "L'événement demandé n'existe pas",
+                     *       "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11/registrations.csv",
                      *       "timestamp": "2026-11-20T10:33:21.774Z"
                      *     }
                      */
