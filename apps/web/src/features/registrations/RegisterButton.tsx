@@ -3,7 +3,13 @@ import { Link, useLocation } from 'react-router';
 import { ApiError } from '../../api/client';
 import type { EventDetail } from '../../api/types';
 import { useMe } from '../auth/api';
-import { useRegister } from './api';
+import {
+  useJoinWaitlist,
+  useLeaveWaitlist,
+  useMyRegistrations,
+  useMyWaitlist,
+  useRegister,
+} from './api';
 
 interface RegisterButtonProps {
   event: Pick<EventDetail, 'id' | 'title' | 'startsAt' | 'isFull' | 'isCancelled'>;
@@ -21,15 +27,32 @@ function errorMessage(error: unknown): string {
   return "L'inscription a échoué. Réessayez dans un instant.";
 }
 
+function waitlistErrorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.status === 401)
+      return 'Votre session a expiré. Reconnectez-vous pour rejoindre la liste d’attente.';
+    if (error.status === 404) return "Cet événement n'existe plus.";
+    if (error.status === 409) return error.message;
+  }
+  return 'Impossible de rejoindre la liste d’attente. Réessayez dans un instant.';
+}
+
 /**
  * Action « S'inscrire » du détail d'un événement (US05), avec ses états :
- * visiteur (renvoyé vers la connexion), prêt, en cours, inscrit, annulé, complet, terminé, erreur.
+ * visiteur, prêt, en cours, inscrit, annulé, complet (+ liste d'attente US14), terminé, erreur.
  */
 export function RegisterButton({ event, now: nowProp }: RegisterButtonProps) {
   const [now] = useState(() => nowProp ?? Date.now());
   const { data: user, isPending: sessionPending } = useMe();
   const location = useLocation();
   const register = useRegister(event.id);
+  const joinWaitlist = useJoinWaitlist(event.id);
+  const leaveWaitlist = useLeaveWaitlist();
+  const myRegistrations = useMyRegistrations();
+  const waitlist = useMyWaitlist();
+  const myEntry = waitlist.data?.find((entry) => entry.event.id === event.id);
+  const alreadyRegistered =
+    register.isSuccess || myRegistrations.data?.some((item) => item.event.id === event.id);
 
   if (event.isCancelled) {
     return (
@@ -39,17 +62,19 @@ export function RegisterButton({ event, now: nowProp }: RegisterButtonProps) {
     );
   }
 
-  if (register.isSuccess) {
+  if (alreadyRegistered) {
     return (
       <div className="register">
         <button type="button" className="button" disabled>
           Inscrit ✓
         </button>
-        <p className="register__confirmation" role="status">
-          Inscription confirmée : vous participez à « {event.title} ». Vous allez recevoir un e-mail
-          de confirmation{user && <> à l'adresse {user.email}</>}.{' '}
-          <Link to="/mes-inscriptions">Voir mes inscriptions</Link>
-        </p>
+        {register.isSuccess && (
+          <p className="register__confirmation" role="status">
+            Inscription confirmée : vous participez à « {event.title} ». Vous allez recevoir un
+            e-mail de confirmation{user && <> à l'adresse {user.email}</>}.{' '}
+            <Link to="/mes-inscriptions">Voir mes inscriptions</Link>
+          </p>
+        )}
       </div>
     );
   }
@@ -63,10 +88,57 @@ export function RegisterButton({ event, now: nowProp }: RegisterButtonProps) {
   }
 
   if (event.isFull) {
+    if (!sessionPending && !user) {
+      const redirect = encodeURIComponent(`${location.pathname}${location.search}`);
+      return (
+        <Link to={`/connexion?redirect=${redirect}`} className="button">
+          Rejoindre la liste d'attente
+        </Link>
+      );
+    }
+
+    const onWaitlist = myEntry ?? (joinWaitlist.isSuccess ? joinWaitlist.data : null);
+    if (onWaitlist) {
+      return (
+        <div className="register">
+          <p className="register__confirmation" role="status">
+            Vous êtes en liste d'attente (position {onWaitlist.position}).
+          </p>
+          <button
+            type="button"
+            className="button button--ghost"
+            disabled={leaveWaitlist.isPending}
+            onClick={() =>
+              leaveWaitlist.mutate(onWaitlist.id, { onSuccess: () => joinWaitlist.reset() })
+            }
+          >
+            {leaveWaitlist.isPending ? 'Retrait…' : "Quitter la liste d'attente"}
+          </button>
+          {leaveWaitlist.isError && (
+            <p className="register__error" role="alert">
+              Impossible de quitter la liste d'attente. Réessayez.
+            </p>
+          )}
+        </div>
+      );
+    }
+
     return (
-      <button type="button" className="button" disabled>
-        Complet
-      </button>
+      <div className="register">
+        <button
+          type="button"
+          className="button"
+          disabled={sessionPending || joinWaitlist.isPending || waitlist.isPending}
+          onClick={() => joinWaitlist.mutate()}
+        >
+          {joinWaitlist.isPending ? 'Inscription…' : "Rejoindre la liste d'attente"}
+        </button>
+        {joinWaitlist.isError && (
+          <p className="register__error" role="alert">
+            {waitlistErrorMessage(joinWaitlist.error)}
+          </p>
+        )}
+      </div>
     );
   }
 

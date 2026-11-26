@@ -6,6 +6,7 @@ import { meQueryKey, useMe } from '../auth/api';
 
 /** Préfixe commun : invalider cette clé recharge la liste, quel que soit l'utilisateur. */
 export const myRegistrationsKey = ['registrations', 'me'] as const;
+export const myWaitlistKey = ['waitlist', 'me'] as const;
 
 /**
  * Inscriptions de l'utilisateur connecté, passées comprises (US06, US07).
@@ -21,6 +22,21 @@ export function useMyRegistrations() {
     queryFn: async ({ signal }) => {
       const result = await api.GET('/api/v1/registrations/me', { signal });
       // Session expirée : oublier l'utilisateur, `RequireAuth` renvoie alors vers la connexion.
+      if (result.response.status === 401) queryClient.setQueryData(meQueryKey, null);
+      return unwrap(result);
+    },
+  });
+}
+
+/** Listes d'attente de l'utilisateur connecté, avec position (US14). */
+export function useMyWaitlist() {
+  const queryClient = useQueryClient();
+  const { data: user } = useMe();
+  return useQuery({
+    queryKey: [...myWaitlistKey, user?.id],
+    enabled: Boolean(user),
+    queryFn: async ({ signal }) => {
+      const result = await api.GET('/api/v1/waitlist/me', { signal });
       if (result.response.status === 401) queryClient.setQueryData(meQueryKey, null);
       return unwrap(result);
     },
@@ -51,6 +67,7 @@ export function useRegister(eventId: string) {
         predicate: (query) => query.queryKey[1] !== 'detail',
       });
       void queryClient.invalidateQueries({ queryKey: myRegistrationsKey });
+      void queryClient.invalidateQueries({ queryKey: myWaitlistKey });
     },
     onError: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.event(eventId) });
@@ -58,9 +75,40 @@ export function useRegister(eventId: string) {
   });
 }
 
+/** Rejoint la liste d'attente d'un événement complet (US14). */
+export function useJoinWaitlist(eventId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () =>
+      unwrap(
+        await api.POST('/api/v1/events/{id}/waitlist', {
+          params: { path: { id: eventId } },
+        }),
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: myWaitlistKey });
+    },
+  });
+}
+
+/** Quitte une place en liste d'attente (US14). */
+export function useLeaveWaitlist() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (entryId: string) => {
+      const { response, error } = await api.DELETE('/api/v1/waitlist/{id}', {
+        params: { path: { id: entryId } },
+      });
+      if (!response.ok) throw new ApiError(response.status, error as ApiErrorBody | undefined);
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: myWaitlistKey }),
+  });
+}
+
 /**
  * Annule l'inscription `registrationId` (US06). La place est libérée côté API :
  * on recharge la liste des inscriptions et tous les événements (jauges des listes et des détails).
+ * US14 : une promotion éventuelle met aussi à jour listes d'attente et inscriptions.
  */
 export function useCancelRegistration() {
   const queryClient = useQueryClient();
@@ -74,6 +122,7 @@ export function useCancelRegistration() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['events'] });
+      void queryClient.invalidateQueries({ queryKey: myWaitlistKey });
     },
     // Succès ou refus (403, 404, 409), la liste doit refléter l'état réel.
     onSettled: () => queryClient.invalidateQueries({ queryKey: myRegistrationsKey }),

@@ -12,6 +12,8 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import type { EventRegistrantDto } from './dto/event-registrant.dto.js';
 import type { RegistrationDto } from './dto/registration.dto.js';
 import type { UserRegistrationDto } from './dto/user-registration.dto.js';
+import type { UserWaitlistEntryDto } from './dto/user-waitlist-entry.dto.js';
+import type { WaitlistEntryDto } from './dto/waitlist-entry.dto.js';
 import { RegistrationMailer } from './registration-mailer.service.js';
 import { type RegistrationsCsv, toRegistrationsCsv } from './registrations-csv.js';
 import { REGISTRATION_MESSAGES } from './registrations.constants.js';
@@ -69,6 +71,8 @@ export class RegistrationsService {
         }
 
         const registration = await tx.registration.create({ data: { eventId, userId } });
+        // Si l'utilisateur était encore en liste d'attente (ex. capacité augmentée), on l'en retire.
+        await tx.waitlistEntry.deleteMany({ where: { eventId, userId } });
         const remaining = remainingSeats(capacity, taken + 1);
         return {
           id: registration.id,
@@ -86,6 +90,121 @@ export class RegistrationsService {
         throw new ConflictException(REGISTRATION_MESSAGES.alreadyRegistered);
       }
       throw error;
+    }
+  }
+
+  /**
+   * Place `userId` en liste d'attente de l'événement `eventId` (US14), uniquement s'il est
+   * complet. 409 si déjà inscrit, déjà en file, événement non complet, annulé ou passé.
+   */
+  async joinWaitlist(
+    eventId: string,
+    userId: string,
+    now: Date = new Date(),
+  ): Promise<WaitlistEntryDto> {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const locked = await tx.$queryRaw<
+          { capacity: number; starts_at: Date; cancelled_at: Date | null }[]
+        >`SELECT capacity, starts_at, cancelled_at FROM events WHERE id = ${eventId} FOR UPDATE`;
+        if (locked.length === 0) {
+          throw new NotFoundException(EVENT_NOT_FOUND_MESSAGE);
+        }
+        const { capacity, starts_at: startsAt, cancelled_at: cancelledAt } = locked[0];
+
+        const registered = await tx.registration.findUnique({
+          where: { eventId_userId: { eventId, userId } },
+          select: { id: true },
+        });
+        if (registered) {
+          throw new ConflictException(REGISTRATION_MESSAGES.waitlistRegistered);
+        }
+        const already = await tx.waitlistEntry.findUnique({
+          where: { eventId_userId: { eventId, userId } },
+          select: { id: true },
+        });
+        if (already) {
+          throw new ConflictException(REGISTRATION_MESSAGES.alreadyOnWaitlist);
+        }
+        if (cancelledAt) {
+          throw new ConflictException(REGISTRATION_MESSAGES.eventCancelled);
+        }
+        if (startsAt <= now) {
+          throw new ConflictException(REGISTRATION_MESSAGES.eventPast);
+        }
+        const taken = await tx.registration.count({ where: { eventId } });
+        if (taken < capacity) {
+          throw new ConflictException(REGISTRATION_MESSAGES.waitlistNotFull);
+        }
+
+        const ahead = await tx.waitlistEntry.count({ where: { eventId } });
+        const entry = await tx.waitlistEntry.create({ data: { eventId, userId } });
+        return {
+          id: entry.id,
+          eventId,
+          createdAt: entry.createdAt.toISOString(),
+          position: ahead + 1,
+        };
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException(REGISTRATION_MESSAGES.alreadyOnWaitlist);
+      }
+      throw error;
+    }
+  }
+
+  /** Listes d'attente de `userId`, de l'événement le plus proche au plus lointain (US14). */
+  async listWaitlistForUser(userId: string): Promise<UserWaitlistEntryDto[]> {
+    const entries = await this.prisma.waitlistEntry.findMany({
+      where: { userId },
+      include: { event: { include: eventSummaryInclude } },
+      orderBy: [{ event: { startsAt: 'asc' } }, { id: 'asc' }],
+    });
+    if (entries.length === 0) return [];
+
+    const eventIds = [...new Set(entries.map((entry) => entry.eventId))];
+    const peers = await this.prisma.waitlistEntry.findMany({
+      where: { eventId: { in: eventIds } },
+      select: { id: true, eventId: true, createdAt: true },
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+    });
+    const positionById = new Map<string, number>();
+    const counts = new Map<string, number>();
+    for (const peer of peers) {
+      const next = (counts.get(peer.eventId) ?? 0) + 1;
+      counts.set(peer.eventId, next);
+      positionById.set(peer.id, next);
+    }
+
+    return entries.map((entry) => ({
+      id: entry.id,
+      createdAt: entry.createdAt.toISOString(),
+      position: positionById.get(entry.id) ?? 1,
+      event: toEventSummary(entry.event),
+    }));
+  }
+
+  /**
+   * Quitte la liste d'attente `entryId` (US14) : réservé au propriétaire (403 sinon).
+   */
+  async leaveWaitlist(entryId: string, userId: string): Promise<void> {
+    const entry = await this.prisma.waitlistEntry.findUnique({
+      where: { id: entryId },
+      select: { userId: true },
+    });
+    if (!entry) {
+      throw new NotFoundException(REGISTRATION_MESSAGES.waitlistNotFound);
+    }
+    if (entry.userId !== userId) {
+      throw new ForbiddenException(REGISTRATION_MESSAGES.waitlistNotOwner);
+    }
+
+    const { count } = await this.prisma.waitlistEntry.deleteMany({
+      where: { id: entryId, userId },
+    });
+    if (count === 0) {
+      throw new NotFoundException(REGISTRATION_MESSAGES.waitlistNotFound);
     }
   }
 
@@ -162,15 +281,18 @@ export class RegistrationsService {
   }
 
   /**
-   * Annule l'inscription `registrationId` de `userId` (US06) : la place est libérée,
-   * puisque les places restantes se déduisent des inscriptions.
-   * 404 si elle n'existe pas, 403 si elle appartient à quelqu'un d'autre,
-   * 409 si l'événement est annulé (US09) ou déjà passé.
+   * Annule l'inscription `registrationId` de `userId` (US06) : la place est libérée.
+   * US14 : si quelqu'un attend, le premier de la file est inscrit automatiquement et reçoit
+   * l'e-mail de confirmation (US11). 404 / 403 / 409 comme avant.
    */
   async cancel(registrationId: string, userId: string, now: Date = new Date()): Promise<void> {
     const registration = await this.prisma.registration.findUnique({
       where: { id: registrationId },
-      select: { userId: true, event: { select: { startsAt: true, cancelledAt: true } } },
+      select: {
+        userId: true,
+        eventId: true,
+        event: { select: { startsAt: true, cancelledAt: true } },
+      },
     });
     if (!registration) {
       throw new NotFoundException(REGISTRATION_MESSAGES.notFound);
@@ -185,13 +307,34 @@ export class RegistrationsService {
       throw new ConflictException(REGISTRATION_MESSAGES.cancelPast);
     }
 
-    // `userId` dans le filtre : même sous concurrence, on ne supprime que sa propre inscription.
-    const { count } = await this.prisma.registration.deleteMany({
-      where: { id: registrationId, userId },
+    const promotedId = await this.prisma.$transaction(async (tx) => {
+      const eventId = registration.eventId;
+      await tx.$queryRaw`SELECT id FROM events WHERE id = ${eventId} FOR UPDATE`;
+
+      // `userId` dans le filtre : même sous concurrence, on ne supprime que sa propre inscription.
+      const { count } = await tx.registration.deleteMany({
+        where: { id: registrationId, userId },
+      });
+      if (count === 0) {
+        throw new NotFoundException(REGISTRATION_MESSAGES.notFound);
+      }
+
+      const next = await tx.waitlistEntry.findFirst({
+        where: { eventId },
+        orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+        select: { id: true, userId: true },
+      });
+      if (!next) return null;
+
+      const promoted = await tx.registration.create({
+        data: { eventId, userId: next.userId },
+      });
+      await tx.waitlistEntry.delete({ where: { id: next.id } });
+      return promoted.id;
     });
-    if (count === 0) {
-      // Annulée entre-temps (double clic) : elle n'existe plus.
-      throw new NotFoundException(REGISTRATION_MESSAGES.notFound);
+
+    if (promotedId) {
+      void this.mailer.sendConfirmation(promotedId);
     }
   }
 }

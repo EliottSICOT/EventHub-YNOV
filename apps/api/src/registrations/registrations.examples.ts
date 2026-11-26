@@ -4,9 +4,11 @@ import { EVENT_NOT_FOUND_MESSAGE } from '../events/events.service.js';
 import type { EventRegistrantDto } from './dto/event-registrant.dto.js';
 import type { RegistrationDto } from './dto/registration.dto.js';
 import type { UserRegistrationDto } from './dto/user-registration.dto.js';
+import type { UserWaitlistEntryDto } from './dto/user-waitlist-entry.dto.js';
+import type { WaitlistEntryDto } from './dto/waitlist-entry.dto.js';
 import { REGISTRATION_MESSAGES } from './registrations.constants.js';
 
-/** Exemples du contrat OpenAPI des routes d'inscription (US05, US06, US12, US13). */
+/** Exemples du contrat OpenAPI des routes d'inscription (US05, US06, US12, US13, US14). */
 
 const EVENT_ID = '3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11';
 const PATH = `/api/v1/events/${EVENT_ID}/registrations`;
@@ -106,6 +108,77 @@ export const listNotOrganizerExample = error(
 );
 export const listParticipantExample = error(403, 'Forbidden', AUTH_MESSAGES.forbidden);
 export const listNotFoundExample = error(404, 'Not Found', EVENT_NOT_FOUND_MESSAGE);
+
+/** Exemples du contrat de la liste d'attente (US14). */
+
+const WAITLIST_PATH = `/api/v1/events/${EVENT_ID}/waitlist`;
+const WAITLIST_ID = 'a1b2c3d4-5e6f-4a7b-8c9d-0e1f2a3b4c5d';
+const WAITLIST_LEAVE_PATH = `/api/v1/waitlist/${WAITLIST_ID}`;
+
+export const waitlistEntryExample: WaitlistEntryDto = {
+  id: WAITLIST_ID,
+  eventId: EVENT_ID,
+  createdAt: TIMESTAMP,
+  position: 2,
+};
+
+export const userWaitlistExample: UserWaitlistEntryDto[] = [
+  {
+    id: WAITLIST_ID,
+    createdAt: TIMESTAMP,
+    position: 2,
+    event: userRegistrationsExample[0].event,
+  },
+];
+
+export const unauthenticatedWaitlistExample = error(
+  401,
+  'Unauthorized',
+  AUTH_MESSAGES.unauthenticated,
+  WAITLIST_PATH,
+);
+export const waitlistEventNotFoundExample = error(
+  404,
+  'Not Found',
+  EVENT_NOT_FOUND_MESSAGE,
+  WAITLIST_PATH,
+);
+export const alreadyOnWaitlistExample = error(
+  409,
+  'Conflict',
+  REGISTRATION_MESSAGES.alreadyOnWaitlist,
+  WAITLIST_PATH,
+);
+export const waitlistRegisteredExample = error(
+  409,
+  'Conflict',
+  REGISTRATION_MESSAGES.waitlistRegistered,
+  WAITLIST_PATH,
+);
+export const unauthenticatedWaitlistListExample = error(
+  401,
+  'Unauthorized',
+  AUTH_MESSAGES.unauthenticated,
+  '/api/v1/waitlist/me',
+);
+export const waitlistLeaveUnauthenticatedExample = error(
+  401,
+  'Unauthorized',
+  AUTH_MESSAGES.unauthenticated,
+  WAITLIST_LEAVE_PATH,
+);
+export const waitlistLeaveNotOwnerExample = error(
+  403,
+  'Forbidden',
+  REGISTRATION_MESSAGES.waitlistNotOwner,
+  WAITLIST_LEAVE_PATH,
+);
+export const waitlistLeaveNotFoundExample = error(
+  404,
+  'Not Found',
+  REGISTRATION_MESSAGES.waitlistNotFound,
+  WAITLIST_LEAVE_PATH,
+);
 
 /** Exemples du contrat de l'export des inscrits en CSV (US13). */
 

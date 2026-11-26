@@ -76,6 +76,7 @@ function daysFromNow(days: number, hour: number): Date {
 }
 
 async function main() {
+  await prisma.waitlistEntry.deleteMany();
   await prisma.registration.deleteMany();
   await prisma.event.deleteMany();
   await prisma.category.deleteMany();

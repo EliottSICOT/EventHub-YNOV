@@ -20,8 +20,10 @@ import { ApiErrorDto } from '../common/errors/api-error.dto.js';
 import { Role } from '../generated/prisma/enums.js';
 import { EventRegistrantDto } from './dto/event-registrant.dto.js';
 import { RegistrationDto } from './dto/registration.dto.js';
+import { WaitlistEntryDto } from './dto/waitlist-entry.dto.js';
 import { contentDisposition, REGISTRATIONS_CSV_TYPE } from './registrations-csv.js';
 import {
+  alreadyOnWaitlistExample,
   alreadyRegisteredExample,
   eventNotFoundExample,
   eventRegistrantsExample,
@@ -37,6 +39,10 @@ import {
   registrationsCsvDispositionExample,
   registrationsCsvExample,
   unauthenticatedExample,
+  unauthenticatedWaitlistExample,
+  waitlistEntryExample,
+  waitlistEventNotFoundExample,
+  waitlistRegisteredExample,
 } from './registrations.examples.js';
 import { RegistrationsService } from './registrations.service.js';
 @ApiTags('registrations')
@@ -75,6 +81,42 @@ export class RegistrationsController {
   })
   registerToEvent(@Param('id') id: string, @CurrentUser() user: UserDto): Promise<RegistrationDto> {
     return this.registrationsService.register(id, user.id);
+  }
+
+  @Post(':id/waitlist')
+  @UseGuards(AuthGuard)
+  @ApiCookieAuth(SESSION_SECURITY)
+  @ApiOperation({
+    summary: "Rejoindre la liste d'attente",
+    description:
+      "US14 : place l'utilisateur connecté en file d'attente d'un événement complet. Refusée (409) s'il est déjà inscrit, déjà en file, ou si l'événement n'est pas complet, est annulé ou passé. Quand une place se libère (annulation), le premier de la file est inscrit automatiquement et reçoit l'e-mail de confirmation (US11).",
+  })
+  @ApiParam({ name: 'id', description: "Identifiant de l'événement" })
+  @ApiCreatedResponse({
+    type: WaitlistEntryDto,
+    description: 'Place en file, avec la position',
+    example: waitlistEntryExample,
+  })
+  @ApiUnauthorizedResponse({
+    type: ApiErrorDto,
+    description: 'Pas de session, ou session expirée',
+    example: unauthenticatedWaitlistExample,
+  })
+  @ApiNotFoundResponse({
+    type: ApiErrorDto,
+    description: 'Événement inconnu',
+    example: waitlistEventNotFoundExample,
+  })
+  @ApiConflictResponse({
+    type: ApiErrorDto,
+    description: 'Déjà inscrit, déjà en file, événement non complet, annulé ou passé',
+    examples: {
+      alreadyOnWaitlist: { summary: 'Déjà en file', value: alreadyOnWaitlistExample },
+      alreadyRegistered: { summary: 'Déjà inscrit', value: waitlistRegisteredExample },
+    },
+  })
+  joinWaitlist(@Param('id') id: string, @CurrentUser() user: UserDto): Promise<WaitlistEntryDto> {
+    return this.registrationsService.joinWaitlist(id, user.id);
   }
 
   @Get(':id/registrations')

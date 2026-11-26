@@ -105,8 +105,11 @@ Toutes les erreurs suivent `ApiErrorDto` :
 | POST    | `/api/v1/events/{id}/registrations`     | US05, US11       | Inscription de l'utilisateur connecté, en transaction ; 201 avec les places restantes, 401, 404, 409 (déjà inscrit, complet ou passé)                                      |
 | GET     | `/api/v1/events/{id}/registrations`     | US12             | Liste JSON des inscrits (nom, prénom, email, date) par l'organisateur de l'événement ; 200, 401, 403, 404                                                                  |
 | GET     | `/api/v1/events/{id}/registrations.csv` | US13             | Export CSV des inscrits par l'organisateur de l'événement (BOM UTF-8, `;`, CRLF) ; 200 `text/csv`, 401, 403 (participant ou autre organisateur), 404                       |
+| POST    | `/api/v1/events/{id}/waitlist`          | US14             | Rejoindre la liste d'attente d'un événement complet ; 201 avec `position`, 401, 404, 409 (déjà inscrit, déjà en file, non complet, annulé, passé)                          |
+| GET     | `/api/v1/waitlist/me`                   | US14             | Mes places en liste d'attente avec position ; 401 sans session                                                                                                             |
+| DELETE  | `/api/v1/waitlist/{id}`                 | US14             | Quitter une liste d'attente ; 204, 401, 403, 404                                                                                                                           |
 | GET     | `/api/v1/registrations/me`              | US06, US07       | Mes inscriptions (passées comprises), triées par date d'événement ; 401 sans session                                                                                       |
-| DELETE  | `/api/v1/registrations/{id}`            | US06             | Annulation d'une inscription, la place est libérée ; 204, 401, 403 (pas la mienne), 404, 409 (événement passé)                                                             |
+| DELETE  | `/api/v1/registrations/{id}`            | US06, US14       | Annulation d'une inscription, la place est libérée ; le premier de la liste d'attente est inscrit et reçoit l'e-mail (US11) ; 204, 401, 403, 404, 409                      |
 
 Le catalogue n'affiche jamais d'événement passé : sans `from`, il part de maintenant, et un `from` dans le passé est ramené à maintenant. Une date seule dans `to` inclut toute la journée. Côté Front, le champ « Du » n'accepte pas de date passée, et une page au-delà de la dernière (`?page=99`) est remplacée par la dernière page existante.
 
@@ -134,6 +137,12 @@ Les images sont écrites dans `UPLOADS_DIR` (par défaut `apps/api/uploads`, ign
 - `DELETE /registrations/{id}` supprime l'inscription de son propriétaire uniquement (403 sinon) et refuse les événements passés (409) : les places restantes se déduisent des inscriptions, la place est donc libérée sans autre écriture.
 - La contrainte unique `(event_id, user_id)` garantit une seule inscription par utilisateur ; les refus (déjà inscrit, complet, passé) renvoient 409 avec un message distinct.
 - E-mail de confirmation (US11) : envoyé après la validation de la transaction, sans retarder la réponse. Un échec est journalisé (sans l'adresse du participant) et l'inscription reste valide.
+
+### Liste d'attente (US14)
+
+- `POST /events/{id}/waitlist` n'est ouvert que si l'événement est complet (à venir, non annulé). Impossible d'y entrer deux fois, ou si l'on est déjà inscrit.
+- File FIFO (`waitlist_entries`, ordre `created_at`) : à l'annulation d'une inscription, le premier de la file est inscrit dans la même transaction (événement verrouillé) et reçoit l'e-mail de confirmation.
+- `GET /waitlist/me` renvoie la position ; `DELETE /waitlist/{id}` permet de quitter. Côté Front : bouton sur le détail quand l'événement est complet, et section « Listes d'attente » sur Mes inscriptions.
 
 ### Tableau de bord organisateur (US12)
 
@@ -194,7 +203,7 @@ Les tests e2e créent la base `eventhub_test` si besoin et refusent de tourner s
 | 1      | US01, US02, US03     | Livré                                 |
 | 2      | US04, US05           | Livré                                 |
 | 3      | US06 à US09          | Livré                                 |
-| 4      | US10 à US13 (+ US14) | En cours : US10 à US13 livrées |
+| 4      | US10 à US14 | US10 à US14 livrées |
 
 Runbook de l'équipe (#58) : [docs/runbook.md](docs/runbook.md), avec « Démarrer en local », 12 symptômes documentés et le rituel de mise à jour.
 

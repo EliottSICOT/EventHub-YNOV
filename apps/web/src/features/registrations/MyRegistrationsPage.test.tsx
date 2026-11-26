@@ -126,7 +126,7 @@ describe("Annulation d'une inscription (US06, Front)", () => {
     const registration = mockRegistrations.add(full.id, participant.id);
     const user = userEvent.setup();
     const { router } = renderApp(`/events/${full.id}`);
-    expect(await screen.findByRole('button', { name: 'Complet' })).toBeDisabled();
+    expect(await screen.findByRole('button', { name: 'Inscrit ✓' })).toBeDisabled();
 
     await router.navigate('/mes-inscriptions');
     await user.click(await screen.findByRole('button', { name: /^Annuler l'inscription à / }));

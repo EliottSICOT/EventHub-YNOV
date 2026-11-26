@@ -13,6 +13,7 @@ import { mockEvents } from './events';
 import { categories as defaultCategories, events as defaultEvents } from './fixtures';
 import { mockRegistrations } from './registrations';
 import { mockRegistrationsCsv } from './registrationsCsv';
+import { mockWaitlist } from './waitlist';
 
 const http = createOpenApiHttp<paths>({ baseUrl: '*' });
 
@@ -206,6 +207,7 @@ export function createHandlers(events = defaultEvents, categories = defaultCateg
       if (withRegistrations(event).isFull) return conflict('Cet événement est complet');
 
       const registration = mockRegistrations.add(event.id, user.id);
+      mockWaitlist.removeFor(event.id, user.id);
       const { remainingSeats, isFull } = withRegistrations(event);
       return response(201).json({
         id: registration.id,
@@ -214,6 +216,98 @@ export function createHandlers(events = defaultEvents, categories = defaultCateg
         remainingSeats,
         isFull,
       });
+    }),
+
+    // US14 : rejoindre la liste d'attente d'un événement complet.
+    http.post('/api/v1/events/{id}/waitlist', ({ params, request, response }) => {
+      const path = new URL(request.url).pathname;
+      const user = mockAuth.currentUser;
+      if (!user) {
+        return response(401).json(errorBody(401, 'Unauthorized', 'Authentification requise', path));
+      }
+      const event = allEvents().find((e) => e.id === params.id);
+      if (!event) {
+        return response(404).json(
+          errorBody(404, 'Not Found', "L'événement demandé n'existe pas", path),
+        );
+      }
+      const conflict = (message: string) =>
+        response(409).json(errorBody(409, 'Conflict', message, path));
+
+      if (mockRegistrations.has(event.id, user.id)) {
+        return conflict('Vous êtes déjà inscrit à cet événement');
+      }
+      if (mockWaitlist.has(event.id, user.id)) {
+        return conflict("Vous êtes déjà sur la liste d'attente de cet événement");
+      }
+      if (event.isCancelled) return conflict('Cet événement est annulé');
+      if (new Date(event.startsAt).getTime() <= Date.now()) {
+        return conflict('Cet événement est déjà passé');
+      }
+      if (!withRegistrations(event).isFull) {
+        return conflict("La liste d'attente n'est ouverte que lorsque l'événement est complet");
+      }
+
+      const entry = mockWaitlist.add(event.id, user.id);
+      return response(201).json({
+        id: entry.id,
+        eventId: event.id,
+        createdAt: entry.createdAt,
+        position: mockWaitlist.position(event.id, entry.id),
+      });
+    }),
+
+    // US14 : mes places en liste d'attente, avec position.
+    http.get('/api/v1/waitlist/me', ({ request, response }) => {
+      const path = new URL(request.url).pathname;
+      const user = mockAuth.currentUser;
+      if (!user) {
+        return response(401).json(errorBody(401, 'Unauthorized', 'Authentification requise', path));
+      }
+      const mine = mockWaitlist
+        .forUser(user.id)
+        .flatMap((entry) => {
+          const event = allEvents().find((e) => e.id === entry.eventId);
+          return event
+            ? [
+                {
+                  id: entry.id,
+                  createdAt: entry.createdAt,
+                  position: mockWaitlist.position(entry.eventId, entry.id),
+                  event: withRegistrations(toSummary(event)),
+                },
+              ]
+            : [];
+        })
+        .sort((a, b) => a.event.startsAt.localeCompare(b.event.startsAt));
+      return response(200).json(mine);
+    }),
+
+    // US14 : quitter une liste d'attente.
+    http.delete('/api/v1/waitlist/{id}', ({ params, request, response }) => {
+      const path = new URL(request.url).pathname;
+      const user = mockAuth.currentUser;
+      if (!user) {
+        return response(401).json(errorBody(401, 'Unauthorized', 'Authentification requise', path));
+      }
+      const entry = mockWaitlist.find(params.id);
+      if (!entry) {
+        return response(404).json(
+          errorBody(404, 'Not Found', "L'entrée en liste d'attente demandée n'existe pas", path),
+        );
+      }
+      if (entry.userId !== user.id) {
+        return response(403).json(
+          errorBody(
+            403,
+            'Forbidden',
+            "Vous ne pouvez pas quitter la liste d'attente d'un autre participant",
+            path,
+          ),
+        );
+      }
+      mockWaitlist.remove(entry.id);
+      return response(204).empty();
     }),
 
     // US06 : mes inscriptions, passées comprises, de l'événement le plus proche au plus lointain.
@@ -282,6 +376,9 @@ export function createHandlers(events = defaultEvents, categories = defaultCateg
         );
       }
       mockRegistrations.remove(registration.id);
+      // US14 : le premier de la file prend la place libérée.
+      const next = mockWaitlist.takeFirst(registration.eventId);
+      if (next) mockRegistrations.add(registration.eventId, next.userId);
       return response(204).empty();
     }),
 
