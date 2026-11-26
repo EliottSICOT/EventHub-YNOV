@@ -4,11 +4,12 @@ import { MailModule } from '../mail/mail.module.js';
 import { RegistrationMailer } from './registration-mailer.service.js';
 import { RegistrationsController } from './registrations.controller.js';
 import { UserRegistrationsController } from './user-registrations.controller.js';
+import { UserWaitlistController } from './user-waitlist.controller.js';
 import { RegistrationsService } from './registrations.service.js';
 
 @Module({
   imports: [AuthModule, MailModule],
-  controllers: [RegistrationsController, UserRegistrationsController],
+  controllers: [RegistrationsController, UserRegistrationsController, UserWaitlistController],
   providers: [RegistrationsService, RegistrationMailer],
 })
 export class RegistrationsModule {}

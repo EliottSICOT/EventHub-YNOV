@@ -109,21 +109,28 @@ describe('Inscription à un événement (US05, Front)', () => {
     await screen.findByRole('button', { name: 'Inscrit ✓' });
     unmount();
 
-    // Après rechargement, l'état « inscrit » n'est pas connu du Front : l'API répond 409.
+    // Après rechargement, « Mes inscriptions » dit déjà que l'utilisateur est inscrit.
     renderApp(`/events/${open.id}`);
-    await user.click(await screen.findByRole('button', { name: "S'inscrire" }));
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Vous êtes déjà inscrit à cet événement',
-    );
-    expect(screen.getByRole('button', { name: "S'inscrire" })).toBeEnabled();
+    expect(await screen.findByRole('button', { name: 'Inscrit ✓' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: "S'inscrire" })).not.toBeInTheDocument();
   });
 
-  it("affiche « Complet » sans bouton d'inscription pour un événement complet", async () => {
+  it("propose la liste d'attente pour un événement complet (US14)", async () => {
     signIn();
+    const user = userEvent.setup();
     renderApp(`/events/${full.id}`);
-    expect(await screen.findByRole('button', { name: 'Complet' })).toBeDisabled();
+    expect(
+      await screen.findByRole('button', { name: "Rejoindre la liste d'attente" }),
+    ).toBeEnabled();
     expect(screen.queryByRole('button', { name: "S'inscrire" })).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: "S'inscrire" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: "Rejoindre la liste d'attente" }));
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      "Vous êtes en liste d'attente (position 1)",
+    );
+    expect(
+      screen.getByRole('button', { name: "Quitter la liste d'attente" }),
+    ).toBeInTheDocument();
   });
 
   it('affiche « Événement terminé » pour un événement passé', async () => {
@@ -153,7 +160,9 @@ describe('Inscription à un événement (US05, Front)', () => {
     await user.click(screen.getByRole('button', { name: "S'inscrire" }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Cet événement est complet');
-    expect(await screen.findByRole('button', { name: 'Complet' })).toBeDisabled();
+    expect(
+      await screen.findByRole('button', { name: "Rejoindre la liste d'attente" }),
+    ).toBeEnabled();
   });
 
   it("affiche une erreur claire si l'API est indisponible", async () => {

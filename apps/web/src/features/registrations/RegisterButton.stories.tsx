@@ -46,7 +46,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Visiteur: Story = { decorators: [withSession(null)] };
 export const Connecte: Story = { decorators: [withSession(participant)] };
-export const Complet: Story = {
+export const ListeAttente: Story = {
   decorators: [withSession(participant)],
   args: {
     event: {

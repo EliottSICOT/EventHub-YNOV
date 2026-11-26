@@ -4,6 +4,7 @@ import { cleanup } from '@testing-library/react';
 import { mockAuth } from '../mocks/auth';
 import { mockEvents } from '../mocks/events';
 import { mockRegistrations } from '../mocks/registrations';
+import { mockWaitlist } from '../mocks/waitlist';
 import { server } from '../mocks/server';
 
 /**
@@ -20,6 +21,7 @@ afterEach(() => {
   server.resetHandlers();
   mockAuth.reset();
   mockRegistrations.reset();
+  mockWaitlist.reset();
   mockEvents.reset();
   cleanup();
 });

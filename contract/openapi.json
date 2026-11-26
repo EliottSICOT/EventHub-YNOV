@@ -1381,6 +1381,116 @@
         ]
       }
     },
+    "/api/v1/events/{id}/waitlist": {
+      "post": {
+        "description": "US14 : place l'utilisateur connecté en file d'attente d'un événement complet. Refusée (409) s'il est déjà inscrit, déjà en file, ou si l'événement n'est pas complet, est annulé ou passé. Quand une place se libère (annulation), le premier de la file est inscrit automatiquement et reçoit l'e-mail de confirmation (US11).",
+        "operationId": "joinWaitlist",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Identifiant de l'événement",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Place en file, avec la position",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaitlistEntryDto"
+                },
+                "example": {
+                  "id": "a1b2c3d4-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+                  "eventId": "3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11",
+                  "createdAt": "2026-11-20T10:33:21.774Z",
+                  "position": 2
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Pas de session, ou session expirée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "statusCode": 401,
+                  "error": "Unauthorized",
+                  "message": "Authentification requise",
+                  "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11/waitlist",
+                  "timestamp": "2026-11-20T10:33:21.774Z"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Événement inconnu",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "statusCode": 404,
+                  "error": "Not Found",
+                  "message": "L'événement demandé n'existe pas",
+                  "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11/waitlist",
+                  "timestamp": "2026-11-20T10:33:21.774Z"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Déjà inscrit, déjà en file, événement non complet, annulé ou passé",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "examples": {
+                  "alreadyOnWaitlist": {
+                    "summary": "Déjà en file",
+                    "value": {
+                      "statusCode": 409,
+                      "error": "Conflict",
+                      "message": "Vous êtes déjà sur la liste d’attente de cet événement",
+                      "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11/waitlist",
+                      "timestamp": "2026-11-20T10:33:21.774Z"
+                    }
+                  },
+                  "alreadyRegistered": {
+                    "summary": "Déjà inscrit",
+                    "value": {
+                      "statusCode": 409,
+                      "error": "Conflict",
+                      "message": "Vous êtes déjà inscrit à cet événement",
+                      "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11/waitlist",
+                      "timestamp": "2026-11-20T10:33:21.774Z"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Rejoindre la liste d'attente",
+        "tags": [
+          "registrations"
+        ]
+      }
+    },
     "/api/v1/events/{id}/registrations.csv": {
       "get": {
         "description": "US13 : réservé à l'organisateur de l'événement. Fichier lisible tel quel dans Excel en français : BOM UTF-8, séparateur `;`, fins de ligne CRLF. Colonnes `Nom;Prénom;Email;Date d'inscription`, dates `JJ/MM/AAAA HH:mm` à l'heure de Paris, inscrits triés par date d'inscription. Une valeur qui commence par `=`, `+`, `-`, `@`, une tabulation ou un retour chariot est préfixée d'une apostrophe (injection de formules). Sans inscrit, le fichier ne contient que la ligne d'en-tête. Nom du fichier : `inscrits-<titre-en-slug>-<AAAA-MM-JJ>.csv`, dans `Content-Disposition`.",
@@ -1664,6 +1774,162 @@
         "summary": "Annuler une inscription",
         "tags": [
           "registrations"
+        ]
+      }
+    },
+    "/api/v1/waitlist/me": {
+      "get": {
+        "description": "US14 : listes d'attente de l'utilisateur connecté, de l'événement le plus proche au plus lointain, avec la position dans chaque file.",
+        "operationId": "listMyWaitlist",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Liste vide si aucune place en attente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserWaitlistEntryDto"
+                  }
+                },
+                "example": [
+                  {
+                    "id": "a1b2c3d4-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+                    "createdAt": "2026-11-20T10:33:21.774Z",
+                    "position": 2,
+                    "event": {
+                      "id": "3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11",
+                      "title": "Nuit du jazz",
+                      "startsAt": "2026-12-05T18:00:00.000Z",
+                      "endsAt": "2026-12-05T21:00:00.000Z",
+                      "venue": "Le Transbordeur",
+                      "city": "Lyon",
+                      "capacity": 300,
+                      "priceCents": 1500,
+                      "remainingSeats": 41,
+                      "isFull": false,
+                      "isCancelled": false,
+                      "imageUrl": null,
+                      "category": {
+                        "id": "5d1f0c52-6a3e-4b8e-9a43-0d7f1e2b9c22",
+                        "name": "Concert",
+                        "slug": "concert"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "401": {
+            "description": "Pas de session, ou session expirée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "statusCode": 401,
+                  "error": "Unauthorized",
+                  "message": "Authentification requise",
+                  "path": "/api/v1/waitlist/me",
+                  "timestamp": "2026-11-20T10:33:21.774Z"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Mes places en liste d'attente",
+        "tags": [
+          "waitlist"
+        ]
+      }
+    },
+    "/api/v1/waitlist/{id}": {
+      "delete": {
+        "description": "US14 : retire l'entrée de la file. Réservé au propriétaire (403 sinon). Les positions des suivants avancent.",
+        "operationId": "leaveWaitlist",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Identifiant de l'entrée en liste d'attente",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Entrée retirée"
+          },
+          "401": {
+            "description": "Pas de session, ou session expirée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "statusCode": 401,
+                  "error": "Unauthorized",
+                  "message": "Authentification requise",
+                  "path": "/api/v1/waitlist/a1b2c3d4-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+                  "timestamp": "2026-11-20T10:33:21.774Z"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "L'entrée appartient à un autre utilisateur",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "statusCode": 403,
+                  "error": "Forbidden",
+                  "message": "Vous ne pouvez pas quitter la liste d'attente d'un autre participant",
+                  "path": "/api/v1/waitlist/a1b2c3d4-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+                  "timestamp": "2026-11-20T10:33:21.774Z"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Entrée inconnue (ou déjà quittée / promue)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "statusCode": 404,
+                  "error": "Not Found",
+                  "message": "L'entrée en liste d'attente demandée n'existe pas",
+                  "path": "/api/v1/waitlist/a1b2c3d4-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+                  "timestamp": "2026-11-20T10:33:21.774Z"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Quitter une liste d'attente",
+        "tags": [
+          "waitlist"
         ]
       }
     }
@@ -2331,6 +2597,35 @@
           "isFull"
         ]
       },
+      "WaitlistEntryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "eventId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "position": {
+            "type": "number",
+            "example": 1,
+            "minimum": 1,
+            "description": "Position dans la file (1 = prochain à être inscrit)"
+          }
+        },
+        "required": [
+          "id",
+          "eventId",
+          "createdAt",
+          "position"
+        ]
+      },
       "EventRegistrantDto": {
         "type": "object",
         "properties": {
@@ -2382,6 +2677,34 @@
         "required": [
           "id",
           "createdAt",
+          "event"
+        ]
+      },
+      "UserWaitlistEntryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "position": {
+            "type": "number",
+            "example": 1,
+            "minimum": 1,
+            "description": "Position dans la file (1 = prochain à être inscrit)"
+          },
+          "event": {
+            "$ref": "#/components/schemas/EventSummaryDto"
+          }
+        },
+        "required": [
+          "id",
+          "createdAt",
+          "position",
           "event"
         ]
       }

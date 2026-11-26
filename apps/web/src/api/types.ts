@@ -18,4 +18,6 @@ export type SignInInput = Schemas['SignInDto'];
 export type UserRegistration = Schemas['UserRegistrationDto'];
 export type OrganizerEvent = Schemas['OrganizerEventDto'];
 export type EventRegistrant = Schemas['EventRegistrantDto'];
+export type WaitlistEntry = Schemas['WaitlistEntryDto'];
+export type UserWaitlistEntry = Schemas['UserWaitlistEntryDto'];
 export type CreateEventInput = Schemas['CreateEventDto'];

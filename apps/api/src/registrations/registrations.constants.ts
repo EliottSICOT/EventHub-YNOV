@@ -9,4 +9,9 @@ export const REGISTRATION_MESSAGES = {
   cancelCancelled: "Impossible d'annuler l'inscription à un événement annulé",
   exportNotOrganizer: "Seul l'organisateur de l'événement peut exporter la liste de ses inscrits",
   listNotOrganizer: "Seul l'organisateur de l'événement peut consulter la liste de ses inscrits",
+  alreadyOnWaitlist: "Vous êtes déjà sur la liste d'attente de cet événement",
+  waitlistNotFull: "La liste d'attente n'est ouverte que lorsque l'événement est complet",
+  waitlistRegistered: 'Vous êtes déjà inscrit à cet événement',
+  waitlistNotFound: "L'entrée en liste d'attente demandée n'existe pas",
+  waitlistNotOwner: "Vous ne pouvez pas quitter la liste d'attente d'un autre participant",
 } as const;
