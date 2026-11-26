@@ -14,7 +14,7 @@ Plateforme de gestion d'événements : un visiteur consulte le catalogue, un par
 EventHub-YNOV/
 ├── apps/
 │   ├── api/          NestJS + Prisma (modules auth, events, categories, registrations ; images dans uploads/)
-│   └── web/          SPA React (Liste, Détail, Inscription, Connexion, Mes inscriptions, Créer un événement ; mocks MSW)
+│   └── web/          SPA React (Liste, Détail, Inscription, Connexion, Mes inscriptions, Tableau de bord organisateur, Créer un événement ; mocks MSW)
 ├── contract/
 │   └── openapi.json  contrat généré par l'API, source des types du Front
 ├── docker-compose.yml  PostgreSQL + Mailpit, volume event-images
@@ -98,6 +98,8 @@ Toutes les erreurs suivent `ApiErrorDto` :
 | POST    | `/api/v1/auth/sign-out`             | US04       | Déconnexion : supprime la session en base et efface le cookie ; 204                                                                   |
 | GET     | `/api/v1/auth/me`                   | US04       | Utilisateur connecté (id, email, prénom, nom, rôle) ; 401 sans session                                                                |
 | POST    | `/api/v1/events/{id}/registrations` | US05, US11 | Inscription de l'utilisateur connecté, en transaction ; 201 avec les places restantes, 401, 404, 409 (déjà inscrit, complet ou passé) |
+| GET     | `/api/v1/events/mine`               | US12       | Tableau de bord organisateur : mes événements (passés compris), inscrits / capacité / taux de remplissage ; 401, 403 pour un participant |
+| GET     | `/api/v1/events/{id}/registrations` | US12       | Liste des inscrits (nom, prénom, email, date) ; réservé à l'organisateur de l'événement ; 401, 403, 404                              |
 | GET     | `/api/v1/registrations/me`          | US06, US07 | Mes inscriptions (passées comprises), triées par date d'événement ; 401 sans session                                                  |
 | DELETE  | `/api/v1/registrations/{id}`        | US06       | Annulation d'une inscription, la place est libérée ; 204, 401, 403 (pas la mienne), 404, 409 (événement passé)                        |
 

@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import type { EventAttendeeDto } from '../events/dto/event-attendee.dto.js';
 import { eventSummaryInclude, remainingSeats, toEventSummary } from '../events/events.mapper.js';
 import { EVENT_NOT_FOUND_MESSAGE } from '../events/events.service.js';
 import { Prisma } from '../generated/prisma/client.js';
@@ -80,6 +81,43 @@ export class RegistrationsService {
       }
       throw error;
     }
+  }
+
+  /**
+   * Inscrits de l'événement `eventId` pour son organisateur (US12).
+   * 404 si l'événement n'existe pas, 403 s'il appartient à un autre organisateur.
+   * Tri : nom, prénom, puis date d'inscription.
+   */
+  async listAttendees(eventId: string, organizerId: string): Promise<EventAttendeeDto[]> {
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+      select: { organizerId: true },
+    });
+    if (!event) {
+      throw new NotFoundException(EVENT_NOT_FOUND_MESSAGE);
+    }
+    if (event.organizerId !== organizerId) {
+      throw new ForbiddenException(REGISTRATION_MESSAGES.notEventOrganizer);
+    }
+
+    const registrations = await this.prisma.registration.findMany({
+      where: { eventId },
+      include: {
+        user: { select: { firstName: true, lastName: true, email: true } },
+      },
+      orderBy: [
+        { user: { lastName: 'asc' } },
+        { user: { firstName: 'asc' } },
+        { createdAt: 'asc' },
+        { id: 'asc' },
+      ],
+    });
+    return registrations.map((registration) => ({
+      lastName: registration.user.lastName,
+      firstName: registration.user.firstName,
+      email: registration.user.email,
+      registeredAt: registration.createdAt.toISOString(),
+    }));
   }
 
   /** Inscriptions de `userId`, de l'événement le plus proche au plus lointain (US06). */

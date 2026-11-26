@@ -14,3 +14,5 @@ export type SignUpInput = Schemas['SignUpDto'];
 export type SignInInput = Schemas['SignInDto'];
 export type UserRegistration = Schemas['UserRegistrationDto'];
 export type CreateEventInput = Schemas['CreateEventDto'];
+export type OrganizerEvent = Schemas['OrganizerEventDto'];
+export type EventAttendee = Schemas['EventAttendeeDto'];

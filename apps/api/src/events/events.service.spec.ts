@@ -5,7 +5,7 @@ import { vi } from 'vitest';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { CreateEventDto } from './dto/create-event.dto.js';
 import { buildEventsWhere, CATEGORY_NOT_FOUND_MESSAGE, EventsService } from './events.service.js';
-import { remainingSeats } from './events.mapper.js';
+import { fillRate, remainingSeats } from './events.mapper.js';
 
 const NOW = new Date('2026-11-20T10:00:00.000Z');
 
@@ -63,6 +63,15 @@ describe('remainingSeats', () => {
   });
 });
 
+describe('fillRate', () => {
+  it('calcule le pourcentage arrondi', () => {
+    expect(fillRate(42, 300)).toBe(14);
+    expect(fillRate(1, 3)).toBe(33);
+    expect(fillRate(0, 10)).toBe(0);
+    expect(fillRate(10, 10)).toBe(100);
+  });
+});
+
 describe('EventsService', () => {
   const prismaMock = {
     $transaction: vi.fn((queries: Promise<unknown>[]) => Promise.all(queries)),
@@ -99,6 +108,32 @@ describe('EventsService', () => {
   it('lève une 404 pour un identifiant inconnu', async () => {
     prismaMock.event.findUnique.mockResolvedValue(null);
     await expect(service.findOne('inconnu')).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it("liste les événements de l'organisateur avec le taux de remplissage (US12)", async () => {
+    prismaMock.event.findMany.mockResolvedValue([
+      {
+        id: 'evt-1',
+        title: 'Nuit du jazz',
+        startsAt: new Date('2026-12-05T18:00:00.000Z'),
+        capacity: 300,
+        _count: { registrations: 42 },
+      },
+    ]);
+
+    await expect(service.listForOrganizer('org-1')).resolves.toEqual([
+      {
+        id: 'evt-1',
+        title: 'Nuit du jazz',
+        startsAt: '2026-12-05T18:00:00.000Z',
+        capacity: 300,
+        registeredCount: 42,
+        fillRate: 14,
+      },
+    ]);
+    expect(prismaMock.event.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { organizerId: 'org-1' } }),
+    );
   });
 
   it("expose l'organisateur et les places restantes dans le détail", async () => {

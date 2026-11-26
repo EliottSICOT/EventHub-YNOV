@@ -3,14 +3,16 @@ import type { ApiErrorDto } from '../common/errors/api-error.dto.js';
 import { VALIDATION_MESSAGE } from '../common/errors/validation.exception.js';
 import type { CreateEventDto } from './dto/create-event.dto.js';
 import type { EventDetailDto } from './dto/event-detail.dto.js';
+import type { OrganizerEventDto } from './dto/organizer-event.dto.js';
 import { IMAGE_MESSAGES } from './event-image.js';
 import { CATEGORY_NOT_FOUND_MESSAGE, EVENT_NOT_FOUND_MESSAGE } from './events.service.js';
 
-/** Exemples du contrat OpenAPI de la création d'un événement (US08). */
+/** Exemples du contrat OpenAPI de la création d'un événement (US08) et du tableau de bord (US12). */
 
 const EVENT_ID = '3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11';
 const CATEGORY_ID = '5d1f0c52-6a3e-4b8e-9a43-0d7f1e2b9c22';
 const CREATE_PATH = '/api/v1/events';
+const MINE_PATH = '/api/v1/events/mine';
 const IMAGE_PATH = `/api/v1/events/${EVENT_ID}/image`;
 const TIMESTAMP = '2026-11-20T10:33:21.774Z';
 
@@ -105,3 +107,22 @@ export const imageForbiddenExample = error(
   IMAGE_PATH,
 );
 export const imageNotFoundExample = error(404, 'Not Found', EVENT_NOT_FOUND_MESSAGE, IMAGE_PATH);
+
+export const organizerEventsExample: OrganizerEventDto[] = [
+  {
+    id: EVENT_ID,
+    title: 'Nuit du jazz',
+    startsAt: '2026-12-05T18:00:00.000Z',
+    capacity: 300,
+    registeredCount: 42,
+    fillRate: 14,
+  },
+];
+
+export const mineUnauthenticatedExample = error(
+  401,
+  'Unauthorized',
+  AUTH_MESSAGES.unauthenticated,
+  MINE_PATH,
+);
+export const mineForbiddenExample = error(403, 'Forbidden', AUTH_MESSAGES.forbidden, MINE_PATH);

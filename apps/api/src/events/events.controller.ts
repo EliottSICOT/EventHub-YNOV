@@ -35,6 +35,7 @@ import { Role } from '../generated/prisma/enums.js';
 import { CreateEventDto } from './dto/create-event.dto.js';
 import { EventDetailDto } from './dto/event-detail.dto.js';
 import { ListEventsQueryDto } from './dto/list-events-query.dto.js';
+import { OrganizerEventDto } from './dto/organizer-event.dto.js';
 import { PaginatedEventsDto } from './dto/paginated-events.dto.js';
 import {
   IMAGE_FIELD,
@@ -55,6 +56,9 @@ import {
   imageNotFoundExample,
   imageTooLargeExample,
   imageUnauthenticatedExample,
+  mineForbiddenExample,
+  mineUnauthenticatedExample,
+  organizerEventsExample,
   unknownCategoryExample,
 } from './events.examples.js';
 import { EventsService } from './events.service.js';
@@ -80,6 +84,34 @@ export class EventsController {
   })
   listEvents(@Query() query: ListEventsQueryDto): Promise<PaginatedEventsDto> {
     return this.eventsService.findAll(query);
+  }
+
+  @Get('mine')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.ORGANIZER)
+  @ApiCookieAuth(SESSION_SECURITY)
+  @ApiOperation({
+    summary: 'Mes événements (tableau de bord organisateur)',
+    description:
+      "US12 : liste les événements de l'organisateur connecté, passés compris, avec le nombre d'inscrits, la capacité et le taux de remplissage. Le Front sépare à venir et passés.",
+  })
+  @ApiOkResponse({
+    type: [OrganizerEventDto],
+    description: 'Liste vide si aucun événement',
+    example: organizerEventsExample,
+  })
+  @ApiUnauthorizedResponse({
+    type: ApiErrorDto,
+    description: 'Pas de session, ou session expirée',
+    example: mineUnauthenticatedExample,
+  })
+  @ApiForbiddenResponse({
+    type: ApiErrorDto,
+    description: "L'utilisateur connecté n'est pas organisateur",
+    example: mineForbiddenExample,
+  })
+  listMyEvents(@CurrentUser() user: UserDto): Promise<OrganizerEventDto[]> {
+    return this.eventsService.listForOrganizer(user.id);
   }
 
   @Get(':id')

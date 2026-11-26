@@ -504,6 +504,81 @@
         ]
       }
     },
+    "/api/v1/events/mine": {
+      "get": {
+        "description": "US12 : liste les événements de l'organisateur connecté, passés compris, avec le nombre d'inscrits, la capacité et le taux de remplissage. Le Front sépare à venir et passés.",
+        "operationId": "listMyEvents",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Liste vide si aucun événement",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OrganizerEventDto"
+                  }
+                },
+                "example": [
+                  {
+                    "id": "3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11",
+                    "title": "Nuit du jazz",
+                    "startsAt": "2026-12-05T18:00:00.000Z",
+                    "capacity": 300,
+                    "registeredCount": 42,
+                    "fillRate": 14
+                  }
+                ]
+              }
+            }
+          },
+          "401": {
+            "description": "Pas de session, ou session expirée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "statusCode": 401,
+                  "error": "Unauthorized",
+                  "message": "Authentification requise",
+                  "path": "/api/v1/events/mine",
+                  "timestamp": "2026-11-20T10:33:21.774Z"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "L'utilisateur connecté n'est pas organisateur",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "statusCode": 403,
+                  "error": "Forbidden",
+                  "message": "Vous n'avez pas les droits nécessaires pour cette action",
+                  "path": "/api/v1/events/mine",
+                  "timestamp": "2026-11-20T10:33:21.774Z"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Mes événements (tableau de bord organisateur)",
+        "tags": [
+          "events"
+        ]
+      }
+    },
     "/api/v1/events/{id}": {
       "get": {
         "description": "US03 : description, organisateur, date, lieu et places restantes.",
@@ -750,6 +825,104 @@
       }
     },
     "/api/v1/events/{id}/registrations": {
+      "get": {
+        "description": "US12 : réservé à l'organisateur de l'événement. Renvoie nom, prénom, email et date d'inscription, triés par nom puis prénom.",
+        "operationId": "listEventAttendees",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Identifiant de l'événement",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Liste vide si aucun inscrit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EventAttendeeDto"
+                  }
+                },
+                "example": [
+                  {
+                    "lastName": "Dupont",
+                    "firstName": "Alice",
+                    "email": "alice.dupont@example.com",
+                    "registeredAt": "2026-11-20T10:33:21.774Z"
+                  }
+                ]
+              }
+            }
+          },
+          "401": {
+            "description": "Pas de session, ou session expirée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "statusCode": 401,
+                  "error": "Unauthorized",
+                  "message": "Authentification requise",
+                  "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11/registrations",
+                  "timestamp": "2026-11-20T10:33:21.774Z"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Pas organisateur, ou pas l'organisateur de cet événement",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "statusCode": 403,
+                  "error": "Forbidden",
+                  "message": "Seul l'organisateur de l'événement peut consulter ses inscrits",
+                  "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11/registrations",
+                  "timestamp": "2026-11-20T10:33:21.774Z"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Événement inconnu",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "statusCode": 404,
+                  "error": "Not Found",
+                  "message": "L'événement demandé n'existe pas",
+                  "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11/registrations",
+                  "timestamp": "2026-11-20T10:33:21.774Z"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Liste des inscrits d'un événement",
+        "tags": [
+          "registrations"
+        ]
+      },
       "post": {
         "description": "US05 : inscrit l'utilisateur connecté, dans une transaction qui verrouille l'événement : deux inscriptions simultanées ne peuvent pas dépasser la capacité. Une inscription est refusée (409) si l'utilisateur est déjà inscrit, si l'événement est complet ou s'il est passé. US11 : un e-mail de confirmation est envoyé ; un échec d'envoi n'annule pas l'inscription.",
         "operationId": "registerToEvent",
@@ -1338,6 +1511,49 @@
           "meta"
         ]
       },
+      "OrganizerEventDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "example": "Nuit du jazz"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "capacity": {
+            "type": "number",
+            "example": 300,
+            "minimum": 1
+          },
+          "registeredCount": {
+            "type": "number",
+            "example": 42,
+            "minimum": 0,
+            "description": "Nombre d'inscrits"
+          },
+          "fillRate": {
+            "type": "number",
+            "example": 14,
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Taux de remplissage en pourcentage (0–100), arrondi à l’entier le plus proche"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "startsAt",
+          "capacity",
+          "registeredCount",
+          "fillRate"
+        ]
+      },
       "OrganizerDto": {
         "type": "object",
         "properties": {
@@ -1512,6 +1728,34 @@
           "city",
           "capacity",
           "priceCents"
+        ]
+      },
+      "EventAttendeeDto": {
+        "type": "object",
+        "properties": {
+          "lastName": {
+            "type": "string",
+            "example": "Martin"
+          },
+          "firstName": {
+            "type": "string",
+            "example": "Camille"
+          },
+          "email": {
+            "type": "string",
+            "example": "camille@eventhub.test"
+          },
+          "registeredAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Date d'inscription"
+          }
+        },
+        "required": [
+          "lastName",
+          "firstName",
+          "email",
+          "registeredAt"
         ]
       },
       "RegistrationDto": {

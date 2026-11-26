@@ -10,7 +10,8 @@ import { RegistrationsService } from './registrations.service.js';
 describe('RegistrationsService', () => {
   const prismaMock = {
     $transaction: vi.fn(),
-    registration: { findUnique: vi.fn(), deleteMany: vi.fn() },
+    event: { findUnique: vi.fn() },
+    registration: { findUnique: vi.fn(), findMany: vi.fn(), deleteMany: vi.fn() },
   };
   const mailerMock = { sendConfirmation: vi.fn() };
   let service: RegistrationsService;
@@ -104,6 +105,43 @@ describe('RegistrationsService', () => {
       await expect(service.cancel('reg-1', 'user-1', now)).rejects.toBeInstanceOf(
         NotFoundException,
       );
+    });
+  });
+
+  describe('listAttendees (US12)', () => {
+    it("renvoie les inscrits de l'événement pour son organisateur", async () => {
+      prismaMock.event.findUnique.mockResolvedValue({ organizerId: 'org-1' });
+      prismaMock.registration.findMany.mockResolvedValue([
+        {
+          createdAt: new Date('2026-11-20T10:00:00.000Z'),
+          user: { firstName: 'Alice', lastName: 'Dupont', email: 'alice@example.com' },
+        },
+      ]);
+
+      await expect(service.listAttendees('evt-1', 'org-1')).resolves.toEqual([
+        {
+          lastName: 'Dupont',
+          firstName: 'Alice',
+          email: 'alice@example.com',
+          registeredAt: '2026-11-20T10:00:00.000Z',
+        },
+      ]);
+    });
+
+    it('renvoie 404 pour un événement inconnu', async () => {
+      prismaMock.event.findUnique.mockResolvedValue(null);
+      await expect(service.listAttendees('evt-1', 'org-1')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      expect(prismaMock.registration.findMany).not.toHaveBeenCalled();
+    });
+
+    it("renvoie 403 pour l'événement d'un autre organisateur", async () => {
+      prismaMock.event.findUnique.mockResolvedValue({ organizerId: 'org-2' });
+      await expect(service.listAttendees('evt-1', 'org-1')).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+      expect(prismaMock.registration.findMany).not.toHaveBeenCalled();
     });
   });
 });

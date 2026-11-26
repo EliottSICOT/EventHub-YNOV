@@ -33,6 +33,10 @@ class MockRegistrationStore {
     return this.registrations.filter((r) => r.userId === userId);
   }
 
+  forEvent(eventId: string) {
+    return this.registrations.filter((r) => r.eventId === eventId);
+  }
+
   add(eventId: string, userId: string): MockRegistration {
     const registration = {
       id: crypto.randomUUID(),

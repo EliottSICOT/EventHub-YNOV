@@ -9,8 +9,12 @@ export const categories: Category[] = [
   { id: 'cat-sport', name: 'Sport', slug: 'sport' },
 ];
 
+/**
+ * Aligné sur les comptes de démo de `auth.ts` (camille@eventhub.test)
+ * pour le tableau de bord organisateur (US12).
+ */
 const organizers = [
-  { id: 'org-1', name: 'Camille Martin' },
+  { id: '0d6a1b52-1b0e-4b8e-9a43-0d7f1e2b9c02', name: 'Camille Martin' },
   { id: 'org-2', name: 'Yanis Bernard' },
 ];
 

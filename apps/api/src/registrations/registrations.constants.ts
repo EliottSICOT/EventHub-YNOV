@@ -5,4 +5,6 @@ export const REGISTRATION_MESSAGES = {
   notFound: "L'inscription demandée n'existe pas",
   notOwner: "Vous ne pouvez pas annuler l'inscription d'un autre participant",
   cancelPast: "Impossible d'annuler l'inscription à un événement passé",
+  /** Liste des inscrits (US12) : réservée à l'organisateur de l'événement. */
+  notEventOrganizer: "Seul l'organisateur de l'événement peut consulter ses inscrits",
 } as const;

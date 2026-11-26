@@ -1,11 +1,12 @@
 import { AUTH_MESSAGES } from '../auth/auth.constants.js';
 import type { ApiErrorDto } from '../common/errors/api-error.dto.js';
+import type { EventAttendeeDto } from '../events/dto/event-attendee.dto.js';
 import { EVENT_NOT_FOUND_MESSAGE } from '../events/events.service.js';
 import type { RegistrationDto } from './dto/registration.dto.js';
 import type { UserRegistrationDto } from './dto/user-registration.dto.js';
 import { REGISTRATION_MESSAGES } from './registrations.constants.js';
 
-/** Exemples du contrat OpenAPI des routes d'inscription (US05, US06). */
+/** Exemples du contrat OpenAPI des routes d'inscription (US05, US06, US12). */
 
 const EVENT_ID = '3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11';
 const PATH = `/api/v1/events/${EVENT_ID}/registrations`;
@@ -74,6 +75,27 @@ export const unauthenticatedCancelExample = error(
 );
 export const notOwnerExample = error(403, 'Forbidden', REGISTRATION_MESSAGES.notOwner, CANCEL_PATH);
 export const notFoundExample = error(404, 'Not Found', REGISTRATION_MESSAGES.notFound, CANCEL_PATH);
+export const attendeesExample: EventAttendeeDto[] = [
+  {
+    lastName: 'Dupont',
+    firstName: 'Alice',
+    email: 'alice.dupont@example.com',
+    registeredAt: TIMESTAMP,
+  },
+];
+
+export const attendeesUnauthenticatedExample = error(
+  401,
+  'Unauthorized',
+  AUTH_MESSAGES.unauthenticated,
+);
+export const attendeesForbiddenExample = error(
+  403,
+  'Forbidden',
+  REGISTRATION_MESSAGES.notEventOrganizer,
+);
+export const attendeesNotFoundExample = error(404, 'Not Found', EVENT_NOT_FOUND_MESSAGE);
+
 export const cancelPastExample = error(
   409,
   'Conflict',

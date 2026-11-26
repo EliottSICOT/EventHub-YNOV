@@ -68,6 +68,13 @@ class MockAuthStore {
     return this.accounts.get(email.trim().toLowerCase());
   }
 
+  findById(userId: string): Account | undefined {
+    for (const account of this.accounts.values()) {
+      if (account.user.id === userId) return account;
+    }
+    return undefined;
+  }
+
   create(input: { firstName: string; lastName: string; email: string; password: string }): User {
     const user: User = {
       id: crypto.randomUUID(),

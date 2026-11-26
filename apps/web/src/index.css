@@ -136,12 +136,30 @@ a {
   flex-wrap: wrap;
   gap: 8px;
 }
+.page__header--row {
+  align-items: center;
+}
 .page__header h1 {
   font-size: 1.75rem;
 }
 .page__subtitle {
   margin: 0;
   color: var(--color-muted);
+}
+.page__eyebrow {
+  margin: 0 0 4px;
+  font-size: 0.9rem;
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* Boutons */
@@ -246,10 +264,51 @@ a.button {
   gap: 16px;
 }
 
-/* Écrans organisateur (US08) */
+/* Écrans organisateur (US08, US12) */
 .organizer {
   max-width: 720px;
   margin: 0 auto;
+}
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.dashboard__title {
+  margin: 0;
+  font-size: 1.2rem;
+}
+.dashboard__table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  box-shadow: var(--shadow);
+}
+.dashboard__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+.dashboard__table th,
+.dashboard__table td {
+  padding: 12px 14px;
+  text-align: left;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--color-border);
+}
+.dashboard__table thead th {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-muted);
+  background: var(--color-bg);
+}
+.dashboard__table tbody tr:last-child th,
+.dashboard__table tbody tr:last-child td {
+  border-bottom: none;
+}
+.dashboard__table tbody th {
+  font-weight: 600;
 }
 
 /* Bandeau de confirmation ou d'avertissement */

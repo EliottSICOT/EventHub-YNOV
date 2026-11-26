@@ -1,7 +1,14 @@
-import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { api, unwrap } from '../../api/client';
 import { queryKeys } from '../../api/queries';
 import type { CreateEventInput, EventDetail } from '../../api/types';
+import { meQueryKey, useMe } from '../auth/api';
+
+/** Préfixe commun : invalider cette clé recharge le tableau de bord, quel que soit l'utilisateur. */
+export const myEventsKey = ['events', 'mine'] as const;
+
+export const eventAttendeesKey = (eventId: string) =>
+  ['events', 'attendees', eventId] as const;
 
 /** Met le détail en cache et recharge les listes : le catalogue montre l'événement à jour. */
 function refreshEvent(queryClient: QueryClient, event: EventDetail) {
@@ -9,6 +16,44 @@ function refreshEvent(queryClient: QueryClient, event: EventDetail) {
   void queryClient.invalidateQueries({
     queryKey: ['events'],
     predicate: (query) => query.queryKey[1] !== 'detail',
+  });
+  void queryClient.invalidateQueries({ queryKey: myEventsKey });
+}
+
+/**
+ * Événements de l'organisateur connecté (US12), passés compris.
+ * La clé porte l'identifiant de l'utilisateur : après un changement de compte,
+ * le cache du précédent n'est jamais affiché.
+ */
+export function useMyEvents() {
+  const queryClient = useQueryClient();
+  const { data: user } = useMe();
+  return useQuery({
+    queryKey: [...myEventsKey, user?.id],
+    enabled: Boolean(user),
+    queryFn: async ({ signal }) => {
+      const result = await api.GET('/api/v1/events/mine', { signal });
+      if (result.response.status === 401) queryClient.setQueryData(meQueryKey, null);
+      return unwrap(result);
+    },
+  });
+}
+
+/** Inscrits d'un événement, réservé à son organisateur (US12). */
+export function useEventAttendees(eventId: string) {
+  const queryClient = useQueryClient();
+  const { data: user } = useMe();
+  return useQuery({
+    queryKey: [...eventAttendeesKey(eventId), user?.id],
+    enabled: Boolean(user) && Boolean(eventId),
+    queryFn: async ({ signal }) => {
+      const result = await api.GET('/api/v1/events/{id}/registrations', {
+        params: { path: { id: eventId } },
+        signal,
+      });
+      if (result.response.status === 401) queryClient.setQueryData(meQueryKey, null);
+      return unwrap(result);
+    },
   });
 }
 

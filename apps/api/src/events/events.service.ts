@@ -5,12 +5,14 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import type { CreateEventDto } from './dto/create-event.dto.js';
 import type { EventDetailDto } from './dto/event-detail.dto.js';
 import type { ListEventsQueryDto } from './dto/list-events-query.dto.js';
+import type { OrganizerEventDto } from './dto/organizer-event.dto.js';
 import type { PaginatedEventsDto } from './dto/paginated-events.dto.js';
 import {
   eventDetailInclude,
   eventSummaryInclude,
   toEventDetail,
   toEventSummary,
+  toOrganizerEvent,
 } from './events.mapper.js';
 
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
@@ -58,6 +60,19 @@ export class EventsService {
       throw new NotFoundException(EVENT_NOT_FOUND_MESSAGE);
     }
     return toEventDetail(event);
+  }
+
+  /**
+   * Événements de l'organisateur `organizerId` (US12), passés compris,
+   * triés par date de début croissante. Le Front sépare à venir / passés.
+   */
+  async listForOrganizer(organizerId: string): Promise<OrganizerEventDto[]> {
+    const events = await this.prisma.event.findMany({
+      where: { organizerId },
+      include: { _count: { select: { registrations: true } } },
+      orderBy: [{ startsAt: 'asc' }, { id: 'asc' }],
+    });
+    return events.map(toOrganizerEvent);
   }
 
   /** Crée un événement (US08) au nom de `organizerId`, l'utilisateur connecté. */

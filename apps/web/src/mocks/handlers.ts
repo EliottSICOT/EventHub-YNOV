@@ -1,6 +1,14 @@
 import { createOpenApiHttp } from 'openapi-msw';
 import type { paths } from '../api/schema';
-import type { Category, EventDetail, EventSummary, FieldError, User } from '../api/types';
+import type {
+  Category,
+  EventAttendee,
+  EventDetail,
+  EventSummary,
+  FieldError,
+  OrganizerEvent,
+  User,
+} from '../api/types';
 import { mockAuth } from './auth';
 import { mockEvents } from './events';
 import { categories as defaultCategories, events as defaultEvents } from './fixtures';
@@ -22,6 +30,43 @@ function withRegistrations<T extends { id: string; remainingSeats: number; isFul
 function toSummary(event: EventDetail): EventSummary {
   const { description: _d, address: _a, organizer: _o, ...summary } = event;
   return summary;
+}
+
+/** Remplissage à jour pour le tableau de bord organisateur (US12). */
+function toOrganizerEvent(event: EventDetail): OrganizerEvent {
+  const { remainingSeats, capacity } = withRegistrations(event);
+  const registeredCount = capacity - remainingSeats;
+  return {
+    id: event.id,
+    title: event.title,
+    startsAt: event.startsAt,
+    capacity,
+    registeredCount,
+    fillRate: Math.round((registeredCount / capacity) * 100),
+  };
+}
+
+function attendeesFor(eventId: string): EventAttendee[] {
+  return mockRegistrations
+    .forEvent(eventId)
+    .flatMap((registration) => {
+      const account = mockAuth.findById(registration.userId);
+      if (!account) return [];
+      return [
+        {
+          lastName: account.user.lastName,
+          firstName: account.user.firstName,
+          email: account.user.email,
+          registeredAt: registration.createdAt,
+        },
+      ];
+    })
+    .sort(
+      (a, b) =>
+        a.lastName.localeCompare(b.lastName, 'fr') ||
+        a.firstName.localeCompare(b.firstName, 'fr') ||
+        a.registeredAt.localeCompare(b.registeredAt),
+    );
 }
 
 function errorBody(statusCode: number, error: string, message: string, path: string) {
@@ -88,6 +133,30 @@ export function createHandlers(events = defaultEvents, categories = defaultCateg
       });
     }),
 
+    // US12 : avant `/{id}`, sinon « mine » est pris pour un identifiant.
+    http.get('/api/v1/events/mine', ({ request, response }) => {
+      const path = new URL(request.url).pathname;
+      const user = mockAuth.currentUser;
+      if (!user) {
+        return response(401).json(errorBody(401, 'Unauthorized', 'Authentification requise', path));
+      }
+      if (user.role !== 'ORGANIZER') {
+        return response(403).json(
+          errorBody(
+            403,
+            'Forbidden',
+            "Vous n'avez pas les droits nécessaires pour cette action",
+            path,
+          ),
+        );
+      }
+      const mine = allEvents()
+        .filter((event) => event.organizer.id === user.id)
+        .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
+        .map(toOrganizerEvent);
+      return response(200).json(mine);
+    }),
+
     http.get('/api/v1/events/{id}', ({ params, request, response }) => {
       const event = allEvents().find((e) => e.id === params.id);
       if (!event) {
@@ -101,6 +170,42 @@ export function createHandlers(events = defaultEvents, categories = defaultCateg
         );
       }
       return response(200).json(withRegistrations(event));
+    }),
+
+    // US12 : liste des inscrits, réservée à l'organisateur de l'événement.
+    http.get('/api/v1/events/{id}/registrations', ({ params, request, response }) => {
+      const path = new URL(request.url).pathname;
+      const user = mockAuth.currentUser;
+      if (!user) {
+        return response(401).json(errorBody(401, 'Unauthorized', 'Authentification requise', path));
+      }
+      if (user.role !== 'ORGANIZER') {
+        return response(403).json(
+          errorBody(
+            403,
+            'Forbidden',
+            "Vous n'avez pas les droits nécessaires pour cette action",
+            path,
+          ),
+        );
+      }
+      const event = allEvents().find((e) => e.id === params.id);
+      if (!event) {
+        return response(404).json(
+          errorBody(404, 'Not Found', "L'événement demandé n'existe pas", path),
+        );
+      }
+      if (event.organizer.id !== user.id) {
+        return response(403).json(
+          errorBody(
+            403,
+            'Forbidden',
+            "Seul l'organisateur de l'événement peut consulter ses inscrits",
+            path,
+          ),
+        );
+      }
+      return response(200).json(attendeesFor(event.id));
     }),
 
     http.post('/api/v1/events/{id}/registrations', ({ params, request, response }) => {
