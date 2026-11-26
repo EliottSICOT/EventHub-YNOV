@@ -6,6 +6,7 @@ import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { useMe } from '../auth/api';
 import { formatDateTime } from '../events/format';
 import { useDeleteEvent } from './api';
+import { ExportRegistrationsButton } from './ExportRegistrationsButton';
 
 interface EventActionsProps {
   event: EventDetail;
@@ -23,8 +24,9 @@ function deleteErrorMessage(error: unknown): string {
 }
 
 /**
- * Modifier et Supprimer (US09), sur le détail d'un événement. Visibles seulement pour son
- * organisateur, tant que l'événement n'est ni annulé ni commencé.
+ * Actions de l'organisateur, sur le détail d'un événement, visibles seulement pour lui.
+ * Modifier et Supprimer (US09), tant que l'événement n'est ni annulé ni commencé ;
+ * Exporter en CSV (US13), toujours : la liste sert aussi après un événement ou une annulation.
  */
 export function EventActions({ event, now: nowProp }: EventActionsProps) {
   const [now] = useState(() => nowProp ?? Date.now());
@@ -33,10 +35,8 @@ export function EventActions({ event, now: nowProp }: EventActionsProps) {
   const [confirming, setConfirming] = useState(false);
 
   const registered = event.capacity - event.remainingSeats;
-  const manageable =
-    user?.id === event.organizer.id &&
-    !event.isCancelled &&
-    new Date(event.startsAt).getTime() > now;
+  const isOrganizer = user?.id === event.organizer.id;
+  const manageable = isOrganizer && !event.isCancelled && new Date(event.startsAt).getTime() > now;
 
   return (
     <>
@@ -51,24 +51,30 @@ export function EventActions({ event, now: nowProp }: EventActionsProps) {
           {deleteErrorMessage(deleteEvent.error)}
         </p>
       )}
-      {manageable && (
+      {isOrganizer && (
         <div className="event-actions">
-          <Link
-            to={`/organisateur/evenements/${event.id}/modifier`}
-            className="button button--small"
-          >
-            Modifier
-          </Link>
-          <button
-            type="button"
-            className="button button--ghost button--small"
-            onClick={() => {
-              deleteEvent.reset();
-              setConfirming(true);
-            }}
-          >
-            Supprimer
-          </button>
+          {manageable && (
+            <>
+              <Link
+                to={`/organisateur/evenements/${event.id}/modifier`}
+                className="button button--small"
+              >
+                Modifier
+              </Link>
+              <button
+                type="button"
+                className="button button--ghost button--small"
+                onClick={() => {
+                  deleteEvent.reset();
+                  setConfirming(true);
+                }}
+              >
+                Supprimer
+              </button>
+            </>
+          )}
+          {/* US13, en attendant le tableau de bord organisateur (US12). */}
+          <ExportRegistrationsButton eventId={event.id} />
         </div>
       )}
       {confirming && (
