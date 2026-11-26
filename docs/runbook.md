@@ -286,9 +286,36 @@ Copiez ce modèle dans le bon groupe de la section [Symptômes](#symptômes). Le
 
   Attendu : `Generated Prisma Client`, puis un typecheck sans erreur.
 
+- **Variante, client présent mais périmé** : le dossier existe, mais il a été généré avant un `git pull` qui a modifié `schema.prisma`. Le typecheck signale alors une colonne récente, par exemple `src/events/events.mapper.ts(39,32): error TS2339: Property 'cancelledAt' does not exist on type …`. Le `ls` du diagnostic ne le montre pas ; la même correction (`pnpm --filter api prisma:generate`) règle le problème. Si l'API répond ensuite par des erreurs 500, voir [column … does not exist](#500--une-erreur-inattendue-est-survenue--et-column--does-not-exist).
 - **Prévention** : relancer `pnpm install` après chaque `git pull` qui touche `pnpm-lock.yaml` ou `apps/api/prisma/schema.prisma`.
-- **Source** : reproduit en local le 2026-11-25 dans un clone propre, en supprimant `apps/api/src/generated`.
+- **Source** : reproduit en local le 2026-11-25 dans un clone propre, en supprimant `apps/api/src/generated`. Variante rencontrée le 2026-11-26 pendant US13 (client généré avant la colonne `cancelled_at` d'US09).
 - **Date** : 2026-11-25
+- **Auteur** : Eliott Sicot
+
+#### 500 « Une erreur inattendue est survenue » et column … does not exist
+
+- **Symptôme** : le catalogue ou la page détail affiche une erreur, et l'API répond `500` avec `"message":"Une erreur inattendue est survenue"` sur `GET /api/v1/events` et `GET /api/v1/events/{id}`. Le terminal de l'API affiche `Raw query failed. Code: 42703. Message: column e.cancelled_at does not exist` (code Prisma `P2010`) ou `The column events.cancelled_at does not exist in the current database.` (`P2022`). La colonne citée peut changer selon la migration manquante.
+- **Cause** : le code est à jour (`git pull`, changement de branche), mais la base de dev `eventhub` n'a pas reçu les nouvelles migrations, ici `20261125090825_add_event_cancelled_at` (US09) et `20261125093000_add_event_search` (US10). Les tests e2e passent quand même : `apps/api/test/global-setup.ts` migre lui-même la base `eventhub_test`, qui est une autre base.
+- **Diagnostic** :
+
+  ```bash
+  pnpm --filter api exec prisma migrate status
+  ```
+
+  `Following migrations have not yet been applied:` suivi de la liste confirme la cause. Attendu une fois corrigé : `Database schema is up to date!`.
+
+- **Correction** : appliquer les migrations sans toucher aux données, puis recharger la page (l'API n'a pas besoin d'être relancée).
+
+  ```bash
+  pnpm --filter api exec prisma migrate deploy
+  pnpm --filter api exec prisma migrate status
+  ```
+
+  `pnpm --filter api db:migrate` (`prisma migrate dev`) convient aussi, mais il peut proposer de vider la base s'il détecte un écart avec le schéma.
+
+- **Prévention** : après un `git pull` qui ajoute un dossier dans `apps/api/prisma/migrations`, lancer `prisma migrate deploy` avant `pnpm dev`.
+- **Source** : rencontré le 2026-11-26 pendant US13 (base de dev sans les deux migrations, `pnpm dev` lancé) ; reproduit le même jour sur une base jetable `eventhub_repro` migrée jusqu'à `20261120132038_add_sessions`.
+- **Date** : 2026-11-26
 - **Auteur** : Eliott Sicot
 
 ### Front, images et fichiers
@@ -372,6 +399,35 @@ Copiez ce modèle dans le bon groupe de la section [Symptômes](#symptômes). Le
 - **Prévention** : créer et modifier les fichiers dans l'éditeur, qui suit `.editorconfig`. Dans PowerShell 5.1, ne pas écrire de fichier du projet avec `>` ou `Out-File`.
 - **Source** : premier commit `ea537d8` (README en UTF-16 LE, 36 octets, vu comme binaire), corrigé en UTF-8 par le commit `0af97a3`. Comportement de PowerShell 5.1 reproduit en local le 2026-11-25 avec `powershell -NoProfile`.
 - **Date** : 2026-11-06
+- **Auteur** : Eliott Sicot
+
+#### Des accents deviennent � après un curl -d dans Git Bash
+
+- **Symptôme** : sous Windows, un compte créé avec `curl -d '{"firstName":"Éloïse",…}' http://localhost:5173/api/v1/auth/sign-up` dans Git Bash reçoit bien `201`, mais son nom est enregistré `�lo�se`. Il apparaît ainsi partout : `/auth/me`, l'en-tête du site, l'export CSV des inscrits (US13).
+- **Cause** : le `curl` de Git Bash (`/mingw64/bin/curl`) reçoit ses arguments convertis dans la page de code ANSI de Windows (Windows-1252). « É » part en un seul octet `C9`, qui n'est pas de l'UTF-8 valide ; l'API le remplace par le caractère de remplacement U+FFFD (octets `EF BF BD`). Un corps lu dans un fichier part tel quel, en UTF-8.
+- **Diagnostic** : `--trace` montre les octets envoyés. `c9` confirme la cause ; un envoi correct montre `c3 89`.
+
+  ```bash
+  curl -s -o /dev/null --trace - -H 'Content-Type: application/json' -d '{"email":"É"}' http://localhost:3000/api/v1/auth/sign-in | grep -A1 "Send data"
+  ```
+
+  Pour un compte déjà créé, `efbfbd` dans le prénom stocké confirme aussi la cause :
+
+  ```bash
+  docker compose exec postgres psql -U eventhub -d eventhub -c "SELECT first_name, encode(convert_to(first_name, 'UTF8'), 'hex') FROM users WHERE email = '<email>'"
+  ```
+
+- **Correction** : l'API ne permet pas de renommer un compte. Supprimer le compte abîmé (ses sessions et inscriptions partent avec lui), puis le recréer avec un corps lu dans un fichier :
+
+  ```bash
+  docker compose exec postgres psql -U eventhub -d eventhub -c "DELETE FROM users WHERE email = '<email>'"
+  printf '%s' '{"firstName":"Éloïse","lastName":"Lefèvre","email":"<email>","password":"eventhub-demo"}' > corps.json
+  curl -s -H 'Content-Type: application/json' --data-binary @corps.json http://localhost:5173/api/v1/auth/sign-up
+  ```
+
+- **Prévention** : dans Git Bash, envoyer un JSON qui contient des accents avec `--data-binary @fichier`, ou passer par le Front ou Swagger UI (<http://localhost:3000/api/docs>).
+- **Source** : rencontré le 2026-11-26 pendant la recette d'US13 (curl 8.11.0 de Git for Windows) ; même corps envoyé en argument (`c9`) et depuis un fichier (`c3 89`) à un serveur local qui renvoie les octets reçus.
+- **Date** : 2026-11-26
 - **Auteur** : Eliott Sicot
 
 ## Rituel
