@@ -6,7 +6,7 @@ export interface MockRegistration {
 }
 
 /**
- * Inscriptions simulées pour les mocks MSW (US05, US06).
+ * Inscriptions simulées pour les mocks MSW (US05, US06, US13).
  * Les places restantes d'un événement = celles de la fixture moins les inscriptions faites ici.
  * En mémoire ; remis à zéro entre chaque test.
  */
@@ -22,7 +22,11 @@ class MockRegistrationStore {
   }
 
   count(eventId: string) {
-    return this.registrations.filter((r) => r.eventId === eventId).length;
+    return this.forEvent(eventId).length;
+  }
+
+  forEvent(eventId: string) {
+    return this.registrations.filter((r) => r.eventId === eventId);
   }
 
   find(id: string) {

@@ -92,12 +92,15 @@ class MockAuthStore {
     this.save();
   }
 
-  get currentUser(): User | null {
-    if (!this.sessionUserId) return null;
+  findById(id: string): User | undefined {
     for (const { user } of this.accounts.values()) {
-      if (user.id === this.sessionUserId) return user;
+      if (user.id === id) return user;
     }
-    return null;
+    return undefined;
+  }
+
+  get currentUser(): User | null {
+    return (this.sessionUserId && this.findById(this.sessionUserId)) || null;
   }
 
   private save() {
