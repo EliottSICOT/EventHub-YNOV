@@ -6,6 +6,7 @@ import type { CreateEventDto } from './dto/create-event.dto.js';
 import type { EventDetailDto } from './dto/event-detail.dto.js';
 import type { EventSummaryDto } from './dto/event-summary.dto.js';
 import type { ListEventsQueryDto } from './dto/list-events-query.dto.js';
+import type { OrganizerEventDto } from './dto/organizer-event.dto.js';
 import type { PaginatedEventsDto } from './dto/paginated-events.dto.js';
 import type { UpdateEventDto } from './dto/update-event.dto.js';
 import { assertEventOrganizer } from './event-ownership.js';
@@ -15,6 +16,7 @@ import {
   eventSummaryInclude,
   toEventDetail,
   toEventSummary,
+  toOrganizerEvent,
 } from './events.mapper.js';
 import { catalogueCountSql, cataloguePageSql } from './events.search.js';
 
@@ -63,6 +65,26 @@ export class EventsService {
       throw new NotFoundException(EVENT_NOT_FOUND_MESSAGE);
     }
     return toEventDetail(event);
+  }
+
+  /**
+   * Événements de l'organisateur `organizerId` (US12), passés compris, du plus proche au plus
+   * lointain : le front sépare « à venir » et « passés ». Les annulés restent listés.
+   */
+  async listForOrganizer(organizerId: string): Promise<OrganizerEventDto[]> {
+    const events = await this.prisma.event.findMany({
+      where: { organizerId },
+      select: {
+        id: true,
+        title: true,
+        startsAt: true,
+        capacity: true,
+        cancelledAt: true,
+        _count: { select: { registrations: true } },
+      },
+      orderBy: [{ startsAt: 'asc' }, { id: 'asc' }],
+    });
+    return events.map(toOrganizerEvent);
   }
 
   /** Crée un événement (US08) au nom de `organizerId`, l'utilisateur connecté. */

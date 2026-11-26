@@ -1,11 +1,12 @@
 import { AUTH_MESSAGES } from '../auth/auth.constants.js';
 import type { ApiErrorDto } from '../common/errors/api-error.dto.js';
 import { EVENT_NOT_FOUND_MESSAGE } from '../events/events.service.js';
+import type { EventRegistrantDto } from './dto/event-registrant.dto.js';
 import type { RegistrationDto } from './dto/registration.dto.js';
 import type { UserRegistrationDto } from './dto/user-registration.dto.js';
 import { REGISTRATION_MESSAGES } from './registrations.constants.js';
 
-/** Exemples du contrat OpenAPI des routes d'inscription (US05, US06, US13). */
+/** Exemples du contrat OpenAPI des routes d'inscription (US05, US06, US12, US13). */
 
 const EVENT_ID = '3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11';
 const PATH = `/api/v1/events/${EVENT_ID}/registrations`;
@@ -81,6 +82,30 @@ export const cancelPastExample = error(
   REGISTRATION_MESSAGES.cancelPast,
   CANCEL_PATH,
 );
+
+export const eventRegistrantsExample: EventRegistrantDto[] = [
+  {
+    lastName: 'Dupont',
+    firstName: 'Léa',
+    email: 'lea.dupont@example.com',
+    createdAt: '2026-11-20T09:15:00.000Z',
+  },
+  {
+    lastName: 'Lefèvre',
+    firstName: 'Éloïse',
+    email: 'eloise.lefevre@example.com',
+    createdAt: TIMESTAMP,
+  },
+];
+
+export const listUnauthenticatedExample = error(401, 'Unauthorized', AUTH_MESSAGES.unauthenticated);
+export const listNotOrganizerExample = error(
+  403,
+  'Forbidden',
+  REGISTRATION_MESSAGES.listNotOrganizer,
+);
+export const listParticipantExample = error(403, 'Forbidden', AUTH_MESSAGES.forbidden);
+export const listNotFoundExample = error(404, 'Not Found', EVENT_NOT_FOUND_MESSAGE);
 
 /** Exemples du contrat de l'export des inscrits en CSV (US13). */
 

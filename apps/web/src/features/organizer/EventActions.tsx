@@ -73,7 +73,12 @@ export function EventActions({ event, now: nowProp }: EventActionsProps) {
               </button>
             </>
           )}
-          {/* US13, en attendant le tableau de bord organisateur (US12). */}
+          <Link
+            to={`/organisateur/evenements/${event.id}/inscrits`}
+            className="button button--ghost button--small"
+          >
+            Voir les inscrits
+          </Link>
           <ExportRegistrationsButton eventId={event.id} />
         </div>
       )}

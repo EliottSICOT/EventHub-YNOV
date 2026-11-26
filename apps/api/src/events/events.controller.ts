@@ -39,6 +39,7 @@ import { Role } from '../generated/prisma/enums.js';
 import { CreateEventDto } from './dto/create-event.dto.js';
 import { EventDetailDto } from './dto/event-detail.dto.js';
 import { ListEventsQueryDto } from './dto/list-events-query.dto.js';
+import { OrganizerEventDto } from './dto/organizer-event.dto.js';
 import { PaginatedEventsDto } from './dto/paginated-events.dto.js';
 import { UpdateEventDto } from './dto/update-event.dto.js';
 import {
@@ -66,6 +67,9 @@ import {
   manageForbiddenExample,
   manageNotFoundExample,
   manageUnauthenticatedExample,
+  organizerEventsExample,
+  organizerEventsForbiddenExample,
+  organizerEventsUnauthenticatedExample,
   unknownCategoryExample,
 } from './events.examples.js';
 import { EventsService } from './events.service.js';
@@ -91,6 +95,34 @@ export class EventsController {
   })
   listEvents(@Query() query: ListEventsQueryDto): Promise<PaginatedEventsDto> {
     return this.eventsService.findAll(query);
+  }
+
+  @Get('me')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.ORGANIZER)
+  @ApiCookieAuth(SESSION_SECURITY)
+  @ApiOperation({
+    summary: 'Mes événements (organisateur)',
+    description:
+      "US12 : événements de l'organisateur connecté, passés compris, du plus proche au plus lointain. Chaque élément porte la date, le nombre d'inscrits sur la capacité et le taux de remplissage. Les annulés restent listés (`isCancelled`).",
+  })
+  @ApiOkResponse({
+    type: [OrganizerEventDto],
+    description: 'Liste vide si aucun événement',
+    example: organizerEventsExample,
+  })
+  @ApiUnauthorizedResponse({
+    type: ApiErrorDto,
+    description: 'Pas de session, ou session expirée',
+    example: organizerEventsUnauthenticatedExample,
+  })
+  @ApiForbiddenResponse({
+    type: ApiErrorDto,
+    description: "L'utilisateur connecté n'est pas organisateur",
+    example: organizerEventsForbiddenExample,
+  })
+  listMyEvents(@CurrentUser() user: UserDto): Promise<OrganizerEventDto[]> {
+    return this.eventsService.listForOrganizer(user.id);
   }
 
   @Get(':id')

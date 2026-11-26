@@ -9,6 +9,7 @@ import { eventSummaryInclude, remainingSeats, toEventSummary } from '../events/e
 import { EVENT_NOT_FOUND_MESSAGE } from '../events/events.service.js';
 import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import type { EventRegistrantDto } from './dto/event-registrant.dto.js';
 import type { RegistrationDto } from './dto/registration.dto.js';
 import type { UserRegistrationDto } from './dto/user-registration.dto.js';
 import { RegistrationMailer } from './registration-mailer.service.js';
@@ -89,6 +90,25 @@ export class RegistrationsService {
   }
 
   /**
+   * Inscrits de l'événement `eventId` (US12), réservé à son organisateur `userId` :
+   * 404 si l'événement n'existe pas, 403 s'il appartient à un autre organisateur.
+   * Un événement annulé reste consultable.
+   */
+  async listForEvent(eventId: string, userId: string): Promise<EventRegistrantDto[]> {
+    const registrations = await this.loadEventRegistrations(
+      eventId,
+      userId,
+      REGISTRATION_MESSAGES.listNotOrganizer,
+    );
+    return registrations.map(({ createdAt, user }) => ({
+      lastName: user.lastName,
+      firstName: user.firstName,
+      email: user.email,
+      createdAt: createdAt.toISOString(),
+    }));
+  }
+
+  /**
    * CSV des inscrits de l'événement `eventId` (US13), réservé à son organisateur `userId` :
    * 404 si l'événement n'existe pas, 403 s'il appartient à un autre organisateur.
    * Un événement annulé reste exportable : l'organisateur peut avoir à prévenir ses inscrits.
@@ -99,8 +119,25 @@ export class RegistrationsService {
       select: { title: true, startsAt: true, organizerId: true },
     });
     assertEventOrganizer(event, userId, REGISTRATION_MESSAGES.exportNotOrganizer);
+    const registrations = await this.findRegistrations(eventId);
+    return toRegistrationsCsv(event, registrations);
+  }
 
-    const registrations = await this.prisma.registration.findMany({
+  private async loadEventRegistrations(
+    eventId: string,
+    userId: string,
+    notOrganizerMessage: string,
+  ) {
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+      select: { organizerId: true },
+    });
+    assertEventOrganizer(event, userId, notOrganizerMessage);
+    return this.findRegistrations(eventId);
+  }
+
+  private findRegistrations(eventId: string) {
+    return this.prisma.registration.findMany({
       where: { eventId },
       select: {
         createdAt: true,
@@ -108,7 +145,6 @@ export class RegistrationsService {
       },
       orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
     });
-    return toRegistrationsCsv(event, registrations);
   }
 
   /** Inscriptions de `userId`, de l'événement le plus proche au plus lointain (US06). */

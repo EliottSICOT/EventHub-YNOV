@@ -6,6 +6,8 @@ import { EventDetailPage } from '../features/events/EventDetailPage';
 import { EventListPage } from '../features/events/EventListPage';
 import { CreateEventPage } from '../features/organizer/CreateEventPage';
 import { EditEventPage } from '../features/organizer/EditEventPage';
+import { EventRegistrantsPage } from '../features/organizer/EventRegistrantsPage';
+import { OrganizerDashboardPage } from '../features/organizer/OrganizerDashboardPage';
 import { MyRegistrationsPage } from '../features/registrations/MyRegistrationsPage';
 import { Layout } from './Layout';
 import { NotFoundPage } from './NotFoundPage';
@@ -34,8 +36,10 @@ export const routes: RouteObject[] = [
       {
         element: <RequireOrganizer />,
         children: [
+          { path: 'organisateur', element: <OrganizerDashboardPage /> },
           { path: 'organisateur/evenements/nouveau', element: <CreateEventPage /> },
           { path: 'organisateur/evenements/:id/modifier', element: <EditEventPage /> },
+          { path: 'organisateur/evenements/:id/inscrits', element: <EventRegistrantsPage /> },
         ],
       },
       { path: '*', element: <NotFoundPage /> },

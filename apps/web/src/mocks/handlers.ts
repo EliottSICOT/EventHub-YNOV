@@ -145,6 +145,42 @@ export function createHandlers(events = defaultEvents, categories = defaultCateg
       return response(200).json(withRegistrations(event));
     }),
 
+    // US12 : événements de l'organisateur connecté, passés compris.
+    http.get('/api/v1/events/me', ({ request, response }) => {
+      const path = new URL(request.url).pathname;
+      const user = mockAuth.currentUser;
+      if (!user) {
+        return response(401).json(errorBody(401, 'Unauthorized', 'Authentification requise', path));
+      }
+      if (user.role !== 'ORGANIZER') {
+        return response(403).json(
+          errorBody(
+            403,
+            'Forbidden',
+            "Vous n'avez pas les droits nécessaires pour cette action",
+            path,
+          ),
+        );
+      }
+      const mine = allEvents()
+        .filter((event) => event.organizer.id === user.id)
+        .map((event) => {
+          const current = withRegistrations(event);
+          const registeredCount = current.capacity - current.remainingSeats;
+          return {
+            id: current.id,
+            title: current.title,
+            startsAt: current.startsAt,
+            capacity: current.capacity,
+            registeredCount,
+            fillRate: Math.min(100, Math.round((registeredCount / current.capacity) * 100)),
+            isCancelled: current.isCancelled,
+          };
+        })
+        .sort((a, b) => a.startsAt.localeCompare(b.startsAt) || a.id.localeCompare(b.id));
+      return response(200).json(mine);
+    }),
+
     http.post('/api/v1/events/{id}/registrations', ({ params, request, response }) => {
       const path = new URL(request.url).pathname;
       const user = mockAuth.currentUser;
@@ -420,6 +456,58 @@ export function createHandlers(events = defaultEvents, categories = defaultCateg
       if (conflict) return response(409).json(errorBody(409, 'Conflict', conflict, path));
       mockEvents.update(event, { isCancelled: true });
       return response(204).empty();
+    }),
+
+    // US12 : liste JSON des inscrits, réservée à l'organisateur de l'événement.
+    http.get('/api/v1/events/{id}/registrations', ({ params, request, response }) => {
+      const path = new URL(request.url).pathname;
+      const user = mockAuth.currentUser;
+      if (!user) {
+        return response(401).json(errorBody(401, 'Unauthorized', 'Authentification requise', path));
+      }
+      if (user.role !== 'ORGANIZER') {
+        return response(403).json(
+          errorBody(
+            403,
+            'Forbidden',
+            "Vous n'avez pas les droits nécessaires pour cette action",
+            path,
+          ),
+        );
+      }
+      const event = allEvents().find((e) => e.id === params.id);
+      if (!event) {
+        return response(404).json(
+          errorBody(404, 'Not Found', "L'événement demandé n'existe pas", path),
+        );
+      }
+      if (event.organizer.id !== user.id) {
+        return response(403).json(
+          errorBody(
+            403,
+            'Forbidden',
+            "Seul l'organisateur de l'événement peut consulter la liste de ses inscrits",
+            path,
+          ),
+        );
+      }
+      const rows = mockRegistrations
+        .forEvent(event.id)
+        .flatMap(({ userId, createdAt }) => {
+          const person = mockAuth.findById(userId);
+          return person
+            ? [
+                {
+                  lastName: person.lastName,
+                  firstName: person.firstName,
+                  email: person.email,
+                  createdAt,
+                },
+              ]
+            : [];
+        })
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+      return response(200).json(rows);
     }),
 
     // US13 : export CSV des inscrits simulés, réservé à l'organisateur de l'événement.

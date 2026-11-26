@@ -101,7 +101,9 @@ Toutes les erreurs suivent `ApiErrorDto` :
 | POST    | `/api/v1/auth/sign-in`                  | US04             | Connexion : pose le cookie de session ; 401 générique si les identifiants sont faux                                                                                        |
 | POST    | `/api/v1/auth/sign-out`                 | US04             | Déconnexion : supprime la session en base et efface le cookie ; 204                                                                                                        |
 | GET     | `/api/v1/auth/me`                       | US04             | Utilisateur connecté (id, email, prénom, nom, rôle) ; 401 sans session                                                                                                     |
+| GET     | `/api/v1/events/me`                     | US12             | Événements de l'organisateur connecté (passés compris), avec inscrits / capacité et taux de remplissage ; 401, 403 pour un participant                                     |
 | POST    | `/api/v1/events/{id}/registrations`     | US05, US11       | Inscription de l'utilisateur connecté, en transaction ; 201 avec les places restantes, 401, 404, 409 (déjà inscrit, complet ou passé)                                      |
+| GET     | `/api/v1/events/{id}/registrations`     | US12             | Liste JSON des inscrits (nom, prénom, email, date) par l'organisateur de l'événement ; 200, 401, 403, 404                                                                  |
 | GET     | `/api/v1/events/{id}/registrations.csv` | US13             | Export CSV des inscrits par l'organisateur de l'événement (BOM UTF-8, `;`, CRLF) ; 200 `text/csv`, 401, 403 (participant ou autre organisateur), 404                       |
 | GET     | `/api/v1/registrations/me`              | US06, US07       | Mes inscriptions (passées comprises), triées par date d'événement ; 401 sans session                                                                                       |
 | DELETE  | `/api/v1/registrations/{id}`            | US06             | Annulation d'une inscription, la place est libérée ; 204, 401, 403 (pas la mienne), 404, 409 (événement passé)                                                             |
@@ -133,13 +135,19 @@ Les images sont écrites dans `UPLOADS_DIR` (par défaut `apps/api/uploads`, ign
 - La contrainte unique `(event_id, user_id)` garantit une seule inscription par utilisateur ; les refus (déjà inscrit, complet, passé) renvoient 409 avec un message distinct.
 - E-mail de confirmation (US11) : envoyé après la validation de la transaction, sans retarder la réponse. Un échec est journalisé (sans l'adresse du participant) et l'inscription reste valide.
 
+### Tableau de bord organisateur (US12)
+
+- `GET /events/me` est réservé au rôle `ORGANIZER` : uniquement les événements de l'utilisateur connecté, passés compris, du plus proche au plus lointain. Chaque élément porte la date, `registeredCount` / `capacity` et `fillRate` (pourcentage entier).
+- `GET /events/{id}/registrations` renvoie la liste JSON des inscrits (nom, prénom, email, date d'inscription), avec le même contrôle d'appartenance que l'export CSV.
+- Côté Front : `/organisateur` (à venir / passés) et `/organisateur/evenements/:id/inscrits`, derrière `RequireOrganizer`. Le menu session des organisateurs pointe vers « Mes événements ».
+
 ### Export des inscrits en CSV (US13)
 
 - `GET /events/{id}/registrations.csv` est réservé au rôle `ORGANIZER` et à l'organisateur de l'événement, avec le même contrôle que la modification et l'image (`assertEventOrganizer` : 404 si l'événement est inconnu, puis 403). Un événement annulé ou passé reste exportable.
 - Le fichier s'ouvre tel quel dans Excel en français : BOM UTF-8 (sans lui, Excel lit le fichier en Windows-1252 et casse les accents), séparateur `;`, fins de ligne CRLF. Colonnes `Nom;Prénom;Email;Date d'inscription`, dates `JJ/MM/AAAA HH:mm` à l'heure de Paris, inscrits triés par date d'inscription. Sans inscrit, seule la ligne d'en-tête est renvoyée.
 - Injection de formules : une valeur qui commence par `=`, `+`, `-`, `@`, une tabulation ou un retour chariot est préfixée d'une apostrophe, et Excel l'affiche comme du texte. Une valeur qui contient `;`, `"` ou un saut de ligne est mise entre guillemets.
 - Nom du fichier : `inscrits-<titre-en-slug>-<AAAA-MM-JJ de l'événement>.csv`. `Content-Disposition` donne `filename*` en UTF-8, avec les accents du titre, et `filename` en ASCII pour les autres clients. Le CORS expose cet en-tête, pour que le Front le lise hors du proxy Vite.
-- Côté Front, `ExportRegistrationsButton` (dans `features/organizer`) télécharge le fichier et l'enregistre sous ce nom. En attendant le tableau de bord organisateur (US12), il est affiché dans les actions de l'organisateur sur la page détail ; il ne prend que l'id de l'événement, pour resservir tel quel dans le tableau de bord.
+- Côté Front, `ExportRegistrationsButton` est sur le tableau de bord, la liste des inscrits et le détail de l'événement.
 
 ### Recherche et tri du catalogue
 
@@ -186,7 +194,7 @@ Les tests e2e créent la base `eventhub_test` si besoin et refusent de tourner s
 | 1      | US01, US02, US03     | Livré                                 |
 | 2      | US04, US05           | Livré                                 |
 | 3      | US06 à US09          | Livré                                 |
-| 4      | US10 à US13 (+ US14) | En cours : US10, US11 et US13 livrées |
+| 4      | US10 à US13 (+ US14) | En cours : US10 à US13 livrées |
 
 Runbook de l'équipe (#58) : [docs/runbook.md](docs/runbook.md), avec « Démarrer en local », 12 symptômes documentés et le rituel de mise à jour.
 

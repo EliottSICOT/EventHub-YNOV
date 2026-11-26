@@ -18,15 +18,21 @@ import { UserDto } from '../auth/dto/user.dto.js';
 import { Roles, RolesGuard } from '../auth/roles.guard.js';
 import { ApiErrorDto } from '../common/errors/api-error.dto.js';
 import { Role } from '../generated/prisma/enums.js';
+import { EventRegistrantDto } from './dto/event-registrant.dto.js';
 import { RegistrationDto } from './dto/registration.dto.js';
 import { contentDisposition, REGISTRATIONS_CSV_TYPE } from './registrations-csv.js';
 import {
   alreadyRegisteredExample,
   eventNotFoundExample,
+  eventRegistrantsExample,
   exportNotFoundExample,
   exportNotOrganizerExample,
   exportParticipantExample,
   exportUnauthenticatedExample,
+  listNotFoundExample,
+  listNotOrganizerExample,
+  listParticipantExample,
+  listUnauthenticatedExample,
   registrationExample,
   registrationsCsvDispositionExample,
   registrationsCsvExample,
@@ -69,6 +75,46 @@ export class RegistrationsController {
   })
   registerToEvent(@Param('id') id: string, @CurrentUser() user: UserDto): Promise<RegistrationDto> {
     return this.registrationsService.register(id, user.id);
+  }
+
+  @Get(':id/registrations')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.ORGANIZER)
+  @ApiCookieAuth(SESSION_SECURITY)
+  @ApiOperation({
+    summary: "Liste des inscrits d'un événement",
+    description:
+      "US12 : réservé à l'organisateur de l'événement. Renvoie nom, prénom, email et date d'inscription, triés par date d'inscription. Un événement annulé reste consultable.",
+  })
+  @ApiParam({ name: 'id', description: "Identifiant de l'événement" })
+  @ApiOkResponse({
+    type: [EventRegistrantDto],
+    description: 'Liste vide si aucun inscrit',
+    example: eventRegistrantsExample,
+  })
+  @ApiUnauthorizedResponse({
+    type: ApiErrorDto,
+    description: 'Pas de session, ou session expirée',
+    example: listUnauthenticatedExample,
+  })
+  @ApiForbiddenResponse({
+    type: ApiErrorDto,
+    description: "Participant, ou organisateur d'un autre événement",
+    examples: {
+      notOrganizer: { summary: 'Autre organisateur', value: listNotOrganizerExample },
+      participant: { summary: 'Participant', value: listParticipantExample },
+    },
+  })
+  @ApiNotFoundResponse({
+    type: ApiErrorDto,
+    description: 'Événement inconnu',
+    example: listNotFoundExample,
+  })
+  listRegistrants(
+    @Param('id') id: string,
+    @CurrentUser() user: UserDto,
+  ): Promise<EventRegistrantDto[]> {
+    return this.registrationsService.listForEvent(id, user.id);
   }
 
   @Get(':id/registrations.csv')
