@@ -1,6 +1,7 @@
 import type { Prisma } from '../generated/prisma/client.js';
 import type { EventDetailDto } from './dto/event-detail.dto.js';
 import type { EventSummaryDto } from './dto/event-summary.dto.js';
+import type { OrganizerEventDto } from './dto/organizer-event.dto.js';
 
 export const eventSummaryInclude = {
   category: { select: { id: true, name: true, slug: true } },
@@ -21,6 +22,31 @@ type EventWithDetail = Prisma.EventGetPayload<{
 
 export function remainingSeats(capacity: number, registrations: number): number {
   return Math.max(0, capacity - registrations);
+}
+
+/** Taux de remplissage entier 0–100 (US12). Capacité ≥ 1 en base. */
+export function fillRate(capacity: number, registrations: number): number {
+  return Math.min(100, Math.round((registrations / capacity) * 100));
+}
+
+export function toOrganizerEvent(event: {
+  id: string;
+  title: string;
+  startsAt: Date;
+  capacity: number;
+  cancelledAt: Date | null;
+  _count: { registrations: number };
+}): OrganizerEventDto {
+  const registeredCount = event._count.registrations;
+  return {
+    id: event.id,
+    title: event.title,
+    startsAt: event.startsAt.toISOString(),
+    capacity: event.capacity,
+    registeredCount,
+    fillRate: fillRate(event.capacity, registeredCount),
+    isCancelled: Boolean(event.cancelledAt),
+  };
 }
 
 export function toEventSummary(event: EventWithSummary): EventSummaryDto {

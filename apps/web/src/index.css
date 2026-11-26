@@ -136,6 +136,10 @@ a {
   flex-wrap: wrap;
   gap: 8px;
 }
+.page__header--row {
+  align-items: flex-start;
+  gap: 16px;
+}
 .page__header h1 {
   font-size: 1.75rem;
 }
@@ -562,6 +566,34 @@ a.button {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Liste des inscrits (US12) */
+.registrants {
+  overflow-x: auto;
+}
+.registrants__table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.registrants__table th,
+.registrants__table td {
+  padding: 12px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+.registrants__table th {
+  font-size: 0.85rem;
+  color: var(--color-muted);
+  font-weight: 600;
+}
+.registrants__table tbody tr:last-child td {
+  border-bottom: none;
 }
 .notice {
   margin: 0;

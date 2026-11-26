@@ -1,8 +1,12 @@
-import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { api, ApiError, unwrap } from '../../api/client';
 import { queryKeys } from '../../api/queries';
 import type { ApiErrorBody, CreateEventInput, EventDetail } from '../../api/types';
+import { meQueryKey, useMe } from '../auth/api';
 import { myRegistrationsKey } from '../registrations/api';
+
+/** Préfixe commun : invalider cette clé recharge le tableau de bord, quel que soit l'utilisateur. */
+export const myEventsKey = ['events', 'me'] as const;
 
 /** Met le détail en cache et recharge les listes : le catalogue montre l'événement à jour. */
 function refreshEvent(queryClient: QueryClient, event: EventDetail) {
@@ -10,6 +14,38 @@ function refreshEvent(queryClient: QueryClient, event: EventDetail) {
   void queryClient.invalidateQueries({
     queryKey: ['events'],
     predicate: (query) => query.queryKey[1] !== 'detail',
+  });
+  void queryClient.invalidateQueries({ queryKey: myEventsKey });
+}
+
+/** Événements de l'organisateur connecté, passés compris (US12). */
+export function useMyEvents() {
+  const queryClient = useQueryClient();
+  const { data: user } = useMe();
+  return useQuery({
+    queryKey: [...myEventsKey, user?.id],
+    enabled: Boolean(user),
+    queryFn: async ({ signal }) => {
+      const result = await api.GET('/api/v1/events/me', { signal });
+      if (result.response.status === 401) queryClient.setQueryData(meQueryKey, null);
+      return unwrap(result);
+    },
+  });
+}
+
+/** Inscrits d'un événement, réservé à son organisateur (US12). */
+export function useEventRegistrants(eventId: string) {
+  const queryClient = useQueryClient();
+  return useQuery({
+    queryKey: ['events', eventId, 'registrants'] as const,
+    queryFn: async ({ signal }) => {
+      const result = await api.GET('/api/v1/events/{id}/registrations', {
+        params: { path: { id: eventId } },
+        signal,
+      });
+      if (result.response.status === 401) queryClient.setQueryData(meQueryKey, null);
+      return unwrap(result);
+    },
   });
 }
 
@@ -54,6 +90,7 @@ export function useDeleteEvent(eventId: string) {
         event ? { ...event, isCancelled: true } : event,
       );
       void queryClient.invalidateQueries({ queryKey: myRegistrationsKey });
+      void queryClient.invalidateQueries({ queryKey: myEventsKey });
     },
     // Succès ou refus (403, 404, 409), le détail et le catalogue doivent refléter l'état réel.
     onSettled: () => queryClient.invalidateQueries({ queryKey: ['events'] }),

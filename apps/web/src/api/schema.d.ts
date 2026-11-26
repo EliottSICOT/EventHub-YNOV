@@ -108,6 +108,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/events/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mes événements (organisateur)
+         * @description US12 : événements de l'organisateur connecté, passés compris, du plus proche au plus lointain. Chaque élément porte la date, le nombre d'inscrits sur la capacité et le taux de remplissage. Les annulés restent listés (`isCancelled`).
+         */
+        get: operations["listMyEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/events/{id}": {
         parameters: {
             query?: never;
@@ -180,7 +200,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Liste des inscrits d'un événement
+         * @description US12 : réservé à l'organisateur de l'événement. Renvoie nom, prénom, email et date d'inscription, triés par date d'inscription. Un événement annulé reste consultable.
+         */
+        get: operations["listRegistrants"];
         put?: never;
         /**
          * S'inscrire à un événement
@@ -399,6 +423,31 @@ export interface components {
             data: components["schemas"]["EventSummaryDto"][];
             meta: components["schemas"]["PaginationMetaDto"];
         };
+        OrganizerEventDto: {
+            /** Format: uuid */
+            id: string;
+            /** @example Nuit du jazz */
+            title: string;
+            /** Format: date-time */
+            startsAt: string;
+            /** @example 300 */
+            capacity: number;
+            /**
+             * @description Nombre d'inscrits
+             * @example 42
+             */
+            registeredCount: number;
+            /**
+             * @description Taux de remplissage en pourcentage entier (inscrits / capacité)
+             * @example 14
+             */
+            fillRate: number;
+            /**
+             * @description Vrai si l'organisateur a supprimé l'événement
+             * @example false
+             */
+            isCancelled: boolean;
+        };
         OrganizerDto: {
             /** Format: uuid */
             id: string;
@@ -534,6 +583,19 @@ export interface components {
             remainingSeats: number;
             /** @description Vrai quand il ne reste plus aucune place */
             isFull: boolean;
+        };
+        EventRegistrantDto: {
+            /** @example Dupont */
+            lastName: string;
+            /** @example Léa */
+            firstName: string;
+            /** @example lea.dupont@example.com */
+            email: string;
+            /**
+             * Format: date-time
+             * @description Date d'inscription
+             */
+            createdAt: string;
         };
         UserRegistrationDto: {
             /** Format: uuid */
@@ -903,6 +965,75 @@ export interface operations {
                      *       "error": "Forbidden",
                      *       "message": "Vous n'avez pas les droits nécessaires pour cette action",
                      *       "path": "/api/v1/events",
+                     *       "timestamp": "2026-11-20T10:33:21.774Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    listMyEvents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Liste vide si aucun événement */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "id": "3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11",
+                     *         "title": "Nuit du jazz",
+                     *         "startsAt": "2026-12-05T18:00:00.000Z",
+                     *         "capacity": 300,
+                     *         "registeredCount": 42,
+                     *         "fillRate": 14,
+                     *         "isCancelled": false
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["OrganizerEventDto"][];
+                };
+            };
+            /** @description Pas de session, ou session expirée */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "statusCode": 401,
+                     *       "error": "Unauthorized",
+                     *       "message": "Authentification requise",
+                     *       "path": "/api/v1/events/me",
+                     *       "timestamp": "2026-11-20T10:33:21.774Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description L'utilisateur connecté n'est pas organisateur */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "statusCode": 403,
+                     *       "error": "Forbidden",
+                     *       "message": "Vous n'avez pas les droits nécessaires pour cette action",
+                     *       "path": "/api/v1/events/me",
                      *       "timestamp": "2026-11-20T10:33:21.774Z"
                      *     }
                      */
@@ -1290,6 +1421,90 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CategoryDto"][];
+                };
+            };
+        };
+    };
+    listRegistrants: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identifiant de l'événement */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Liste vide si aucun inscrit */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "lastName": "Dupont",
+                     *         "firstName": "Léa",
+                     *         "email": "lea.dupont@example.com",
+                     *         "createdAt": "2026-11-20T09:15:00.000Z"
+                     *       },
+                     *       {
+                     *         "lastName": "Lefèvre",
+                     *         "firstName": "Éloïse",
+                     *         "email": "eloise.lefevre@example.com",
+                     *         "createdAt": "2026-11-20T10:33:21.774Z"
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["EventRegistrantDto"][];
+                };
+            };
+            /** @description Pas de session, ou session expirée */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "statusCode": 401,
+                     *       "error": "Unauthorized",
+                     *       "message": "Authentification requise",
+                     *       "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11/registrations",
+                     *       "timestamp": "2026-11-20T10:33:21.774Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Participant, ou organisateur d'un autre événement */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Événement inconnu */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "statusCode": 404,
+                     *       "error": "Not Found",
+                     *       "message": "L'événement demandé n'existe pas",
+                     *       "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11/registrations",
+                     *       "timestamp": "2026-11-20T10:33:21.774Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
         };

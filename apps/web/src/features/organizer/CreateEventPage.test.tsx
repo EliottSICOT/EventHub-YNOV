@@ -114,17 +114,17 @@ describe('Création d’un événement (US08)', () => {
       expect(router.state.location.search).toBe(`?redirect=${encodeURIComponent(PAGE)}`);
     });
 
-    it('montre le lien « Créer un événement » à un organisateur seulement', async () => {
+    it('montre le lien « Mes événements » à un organisateur seulement', async () => {
       mockAuth.signIn('camille@eventhub.test');
       const { unmount } = renderApp('/events');
-      const link = await screen.findByRole('link', { name: 'Créer un événement' });
-      expect(link).toHaveAttribute('href', PAGE);
+      const link = await screen.findByRole('link', { name: 'Mes événements' });
+      expect(link).toHaveAttribute('href', '/organisateur');
       unmount();
 
       mockAuth.signIn('participant1@eventhub.test');
       renderApp('/events');
       await screen.findByText('Bonjour Participant');
-      expect(screen.queryByRole('link', { name: 'Créer un événement' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: 'Mes événements' })).not.toBeInTheDocument();
     });
   });
 

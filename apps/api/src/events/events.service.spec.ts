@@ -5,7 +5,7 @@ import { vi } from 'vitest';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { CreateEventDto } from './dto/create-event.dto.js';
 import { CATEGORY_NOT_FOUND_MESSAGE, EventsService } from './events.service.js';
-import { remainingSeats } from './events.mapper.js';
+import { fillRate, remainingSeats } from './events.mapper.js';
 
 const NOW = new Date('2026-11-20T10:00:00.000Z');
 
@@ -19,11 +19,21 @@ describe('remainingSeats', () => {
   });
 });
 
+describe('fillRate', () => {
+  it('calcule le pourcentage entier d’inscrits', () => {
+    expect(fillRate(300, 42)).toBe(14);
+  });
+
+  it('plafonne à 100 %', () => {
+    expect(fillRate(10, 12)).toBe(100);
+  });
+});
+
 describe('EventsService', () => {
   const prismaMock = {
     $transaction: vi.fn((queries: Promise<unknown>[]) => Promise.all(queries)),
     $queryRaw: vi.fn(),
-    event: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn() },
+    event: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
     category: { findUnique: vi.fn() },
   };
   let service: EventsService;
@@ -97,6 +107,34 @@ describe('EventsService', () => {
       organizer: { id: 'u1', name: 'Camille Martin' },
       startsAt: NOW.toISOString(),
     });
+  });
+
+  it('liste les événements de l’organisateur avec le taux de remplissage (US12)', async () => {
+    prismaMock.event.findMany.mockResolvedValue([
+      {
+        id: 'e1',
+        title: 'Nuit du jazz',
+        startsAt: new Date('2026-12-05T18:00:00.000Z'),
+        capacity: 300,
+        cancelledAt: null,
+        _count: { registrations: 42 },
+      },
+    ]);
+
+    await expect(service.listForOrganizer('orga')).resolves.toEqual([
+      {
+        id: 'e1',
+        title: 'Nuit du jazz',
+        startsAt: '2026-12-05T18:00:00.000Z',
+        capacity: 300,
+        registeredCount: 42,
+        fillRate: 14,
+        isCancelled: false,
+      },
+    ]);
+    expect(prismaMock.event.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { organizerId: 'orga' } }),
+    );
   });
 
   describe('create (US08)', () => {

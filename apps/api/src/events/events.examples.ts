@@ -3,11 +3,12 @@ import type { ApiErrorDto } from '../common/errors/api-error.dto.js';
 import { VALIDATION_MESSAGE } from '../common/errors/validation.exception.js';
 import type { CreateEventDto } from './dto/create-event.dto.js';
 import type { EventDetailDto } from './dto/event-detail.dto.js';
+import type { OrganizerEventDto } from './dto/organizer-event.dto.js';
 import { IMAGE_MESSAGES } from './event-image.js';
 import { MANAGE_EVENT_MESSAGES } from './events.constants.js';
 import { CATEGORY_NOT_FOUND_MESSAGE, EVENT_NOT_FOUND_MESSAGE } from './events.service.js';
 
-/** Exemples du contrat OpenAPI de la gestion d'un événement (US08, US09). */
+/** Exemples du contrat OpenAPI de la gestion d'un événement (US08, US09, US12). */
 
 const EVENT_ID = '3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11';
 const CATEGORY_ID = '5d1f0c52-6a3e-4b8e-9a43-0d7f1e2b9c22';
@@ -132,3 +133,30 @@ export const eventCancelledExample = error(
   EVENT_PATH,
 );
 export const eventPastExample = error(409, 'Conflict', MANAGE_EVENT_MESSAGES.past, EVENT_PATH);
+
+const MY_EVENTS_PATH = '/api/v1/events/me';
+
+export const organizerEventsExample: OrganizerEventDto[] = [
+  {
+    id: EVENT_ID,
+    title: 'Nuit du jazz',
+    startsAt: '2026-12-05T18:00:00.000Z',
+    capacity: 300,
+    registeredCount: 42,
+    fillRate: 14,
+    isCancelled: false,
+  },
+];
+
+export const organizerEventsUnauthenticatedExample = error(
+  401,
+  'Unauthorized',
+  AUTH_MESSAGES.unauthenticated,
+  MY_EVENTS_PATH,
+);
+export const organizerEventsForbiddenExample = error(
+  403,
+  'Forbidden',
+  AUTH_MESSAGES.forbidden,
+  MY_EVENTS_PATH,
+);
