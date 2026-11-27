@@ -5,8 +5,22 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>EventHub</title>
+    <script>
+      // Thème HeroUI : clair ou sombre selon la préférence du système, avant le premier rendu.
+      (function () {
+        var query = window.matchMedia('(prefers-color-scheme: dark)');
+        function apply() {
+          var theme = query.matches ? 'dark' : 'light';
+          document.documentElement.classList.remove('light', 'dark');
+          document.documentElement.classList.add(theme);
+          document.documentElement.dataset.theme = theme;
+        }
+        apply();
+        query.addEventListener('change', apply);
+      })();
+    </script>
   </head>
-  <body>
+  <body class="bg-background text-foreground">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
