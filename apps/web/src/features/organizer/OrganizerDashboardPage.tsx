@@ -98,7 +98,7 @@ function EventGroup({ title, events }: EventGroupProps) {
                 className="mt-1 h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-default"
               >
                 <div
-                  className="h-full rounded-full bg-accent"
+                  className="fill-gradient h-full rounded-full"
                   style={{ width: `${Math.min(100, event.fillRate)}%` }}
                 />
               </div>

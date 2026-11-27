@@ -38,7 +38,7 @@ export function EventFilters({
   const canReset = hasActiveFilters(value) || value.sort !== undefined;
 
   return (
-    <Surface className="rounded-2xl p-4 shadow-sm sm:p-5">
+    <Surface className="rounded-3xl p-4 sm:p-6">
       <form
         className="grid grid-cols-1 items-end gap-4 sm:grid-cols-2 lg:grid-cols-12"
         role="search"

@@ -7,7 +7,7 @@ import { SeatsBadge } from './SeatsBadge';
 export function EventCard({ event }: { event: EventSummary }) {
   return (
     <article className="h-full">
-      <Card className="relative h-full gap-3 p-5 transition-shadow hover:shadow-lg focus-within:shadow-lg">
+      <Card className="relative h-full gap-3 rounded-3xl p-5 transition-transform duration-200 hover:-translate-y-1 focus-within:-translate-y-1">
         <div className="flex items-center justify-between gap-2">
           <span className="text-xs font-bold tracking-wider text-accent-soft-foreground uppercase">
             {event.category.name}

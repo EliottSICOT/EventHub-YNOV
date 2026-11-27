@@ -53,12 +53,24 @@ export function EventListPage() {
 
   return (
     <section className="flex flex-col gap-6">
-      <header>
-        <h1 ref={headingRef} tabIndex={-1} className={`${pageTitle} outline-none`}>
+      <header className="glass relative overflow-hidden rounded-3xl bg-surface px-6 py-10 sm:px-10 sm:py-14">
+        {/* Halo décoratif en dégradé, derrière le texte. */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-24 -right-24 size-72 rounded-full bg-gradient-to-br from-indigo-400/40 via-fuchsia-400/25 to-transparent blur-3xl"
+        />
+        <p className="relative text-xs font-bold tracking-[0.2em] text-muted uppercase">
+          Agenda EventHub
+        </p>
+        <h1
+          ref={headingRef}
+          tabIndex={-1}
+          className={`${pageTitle} relative mt-2 outline-none sm:text-5xl`}
+        >
           Événements à venir
         </h1>
         {events.data && (
-          <p className={pageSubtitle} aria-live="polite">
+          <p className={`${pageSubtitle} relative`} aria-live="polite">
             {events.data.meta.total} événement{events.data.meta.total > 1 ? 's' : ''}
           </p>
         )}

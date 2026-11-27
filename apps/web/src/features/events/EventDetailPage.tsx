@@ -80,7 +80,7 @@ export function EventDetailPage() {
         />
       ) : (
         <div
-          className="grid aspect-[4/1] w-full place-items-center rounded-3xl bg-accent-soft text-2xl font-extrabold text-accent-soft-foreground sm:text-4xl"
+          className="gradient-banner grid aspect-[4/1] w-full place-items-center rounded-3xl text-2xl font-extrabold tracking-tight shadow-xl sm:text-4xl"
           aria-hidden="true"
         >
           {event.category.name}
@@ -104,7 +104,7 @@ export function EventDetailPage() {
           </section>
         </div>
 
-        <Card className="h-fit gap-5 p-6 lg:sticky lg:top-24">
+        <Card className="h-fit gap-5 rounded-3xl p-6 lg:sticky lg:top-24">
           <dl className="grid gap-4 text-sm">
             <div>
               <dt className="font-semibold text-muted">Date</dt>
