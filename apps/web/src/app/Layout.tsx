@@ -1,9 +1,13 @@
 import { Link, Outlet } from 'react-router';
 import { SessionMenu } from '../features/auth/SessionMenu';
+import { BackgroundGlow, BackgroundMotionToggle, useBackgroundMotion } from './BackgroundGlow';
 
 export function Layout() {
+  const motion = useBackgroundMotion();
+
   return (
     <div className="flex min-h-screen flex-col">
+      <BackgroundGlow paused={motion.paused} />
       {/* Lien d'évitement (WCAG 2.4.1) : premier élément atteint au clavier. */}
       <a href="#contenu" className="skip-link">
         Aller au contenu
@@ -32,8 +36,11 @@ export function Layout() {
       >
         <Outlet />
       </main>
-      <footer className="border-t border-separator py-6 text-center text-sm text-muted">
-        EventHub · Projet YNOV
+      <footer className="border-t border-separator bg-surface backdrop-blur-2xl">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4 text-sm text-muted sm:px-6">
+          <span>EventHub · Projet YNOV</span>
+          <BackgroundMotionToggle paused={motion.paused} onToggle={motion.toggle} />
+        </div>
       </footer>
     </div>
   );
