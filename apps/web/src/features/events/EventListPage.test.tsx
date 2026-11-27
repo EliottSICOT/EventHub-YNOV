@@ -307,4 +307,24 @@ describe('Accessibilité du catalogue (WCAG 2.2)', () => {
     expect(screen.getByRole('button', { name: 'Suivant' })).toBeDisabled();
     expect(screen.getByRole('heading', { level: 1, name: 'Événements à venir' })).toHaveFocus();
   });
+
+  it("permet de mettre en pause l'animation du fond, et s'en souvient (2.2.2)", async () => {
+    const user = userEvent.setup();
+    const { unmount } = renderApp('/events');
+    await screen.findByText('15 événements');
+
+    const pause = screen.getByRole('button', { name: "Mettre en pause l'animation du fond" });
+    await user.click(pause);
+
+    expect(
+      screen.getByRole('button', { name: "Relancer l'animation du fond" }),
+    ).toBeInTheDocument();
+    expect(document.querySelector('.glow-layer')).toHaveAttribute('data-paused', 'true');
+
+    unmount();
+    renderApp('/events');
+    expect(
+      await screen.findByRole('button', { name: "Relancer l'animation du fond" }),
+    ).toBeInTheDocument();
+  });
 });

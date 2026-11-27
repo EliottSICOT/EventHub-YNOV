@@ -23,6 +23,7 @@ afterEach(() => {
   mockRegistrations.reset();
   mockWaitlist.reset();
   mockEvents.reset();
+  window.localStorage.clear();
   cleanup();
 });
 afterAll(() => server.close());
