@@ -1,3 +1,4 @@
+import { Button } from '@heroui/react';
 import { useId, useState, type ChangeEvent, type FormEvent } from 'react';
 import type { Category, CreateEventInput } from '../../api/types';
 import { TextField } from '../auth/TextField';
@@ -89,9 +90,14 @@ export function CreateEventForm({
   });
 
   return (
-    <form className="form" onSubmit={submit} noValidate aria-label={labels.form}>
+    <form className="flex flex-col gap-5" onSubmit={submit} noValidate aria-label={labels.form}>
       {errors.form && (
-        <p ref={formAlertRef} className="form__alert" role="alert" tabIndex={-1}>
+        <p
+          ref={formAlertRef}
+          className="rounded-xl border border-danger bg-danger-soft px-4 py-3 text-sm font-medium text-danger-soft-foreground"
+          role="alert"
+          tabIndex={-1}
+        >
           {errors.form}
         </p>
       )}
@@ -129,7 +135,7 @@ export function CreateEventForm({
         ))}
       </SelectField>
 
-      <div className="form__row">
+      <div className="grid gap-5 sm:grid-cols-2">
         <TextField
           {...field('startsAt')}
           label="Date et heure de début"
@@ -156,7 +162,7 @@ export function CreateEventForm({
         value={values.venue}
         onChange={change('venue')}
       />
-      <div className="form__row">
+      <div className="grid gap-5 sm:grid-cols-2">
         <TextField
           {...field('address')}
           label="Adresse (facultatif)"
@@ -175,7 +181,7 @@ export function CreateEventForm({
         />
       </div>
 
-      <div className="form__row">
+      <div className="grid gap-5 sm:grid-cols-2">
         <TextField
           {...field('priceCents')}
           label="Prix (€)"
@@ -205,9 +211,9 @@ export function CreateEventForm({
         onChange={changeImage}
       />
 
-      <button type="submit" className="button form__submit" disabled={submitting}>
+      <Button type="submit" size="lg" className="mt-2 self-start" isDisabled={submitting}>
         {submitting ? labels.submitting : labels.submit}
-      </button>
+      </Button>
     </form>
   );
 }

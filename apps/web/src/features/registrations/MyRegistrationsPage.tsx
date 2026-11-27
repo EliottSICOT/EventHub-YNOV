@@ -3,11 +3,25 @@ import { Link } from 'react-router';
 import { ApiError } from '../../api/client';
 import type { UserRegistration, UserWaitlistEntry } from '../../api/types';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { useDocumentTitle } from '../../app/useDocumentTitle';
+import { Notice } from '../../components/Notice';
 import { Spinner } from '../../components/Spinner';
 import { StatusMessage } from '../../components/StatusMessage';
+import {
+  linkButton,
+  listRow,
+  listRowMeta,
+  listRowSide,
+  listRowTitle,
+  listRows,
+  listSection,
+  pageTitle,
+  sectionTitle,
+} from '../../components/ui';
 import { formatDateTime, formatPrice } from '../events/format';
 import { SeatsBadge } from '../events/SeatsBadge';
 import { useCancelRegistration, useLeaveWaitlist, useMyRegistrations, useMyWaitlist } from './api';
+import { Button, Chip } from '@heroui/react';
 
 /** Message affiché quand l'annulation échoue. */
 function cancelErrorMessage(error: unknown): string {
@@ -28,6 +42,7 @@ export function MyRegistrationsPage() {
   const [target, setTarget] = useState<UserRegistration | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [now] = useState(() => Date.now());
+  useDocumentTitle('Mes inscriptions');
 
   const confirmCancellation = () => {
     if (!target) return;
@@ -52,9 +67,7 @@ export function MyRegistrationsPage() {
   if (registrations.isError) {
     return (
       <StatusMessage variant="error" title="Impossible de charger vos inscriptions">
-        <button type="button" className="button" onClick={() => void registrations.refetch()}>
-          Réessayer
-        </button>
+        <Button onPress={() => void registrations.refetch()}>Réessayer</Button>
       </StatusMessage>
     );
   }
@@ -65,31 +78,31 @@ export function MyRegistrationsPage() {
   const past = data.filter((r) => new Date(r.event.startsAt).getTime() <= now).reverse();
 
   return (
-    <section className="page">
-      <header className="page__header">
-        <h1>Mes inscriptions</h1>
+    <section className="flex flex-col gap-8">
+      <header>
+        <h1 className={pageTitle}>Mes inscriptions</h1>
       </header>
 
       {notice && (
-        <p className="notice notice--ok" role="status">
+        <Notice tone="success" role="status">
           {notice}
-        </p>
+        </Notice>
       )}
       {cancel.isError && (
-        <p className="notice notice--error" role="alert">
+        <Notice tone="danger" role="alert">
           {cancelErrorMessage(cancel.error)}
-        </p>
+        </Notice>
       )}
       {leaveWaitlist.isError && (
-        <p className="notice notice--error" role="alert">
+        <Notice tone="danger" role="alert">
           Impossible de quitter la liste d'attente. Réessayez.
-        </p>
+        </Notice>
       )}
 
       {data.length === 0 && waiting.length === 0 ? (
         <StatusMessage title="Vous n'êtes inscrit à aucun événement">
           <p>Parcourez le catalogue pour trouver votre prochaine sortie.</p>
-          <Link to="/events" className="button">
+          <Link to="/events" className={linkButton()}>
             Voir les événements
           </Link>
         </StatusMessage>
@@ -142,27 +155,31 @@ interface RegistrationGroupProps {
 function RegistrationGroup({ title, registrations, onCancel }: RegistrationGroupProps) {
   if (registrations.length === 0) return null;
   return (
-    <section className="registrations" aria-label={title}>
-      <h2 className="registrations__title">{title}</h2>
-      <ul className="registrations__list">
+    <section className={listSection} aria-label={title}>
+      <h2 className={sectionTitle}>{title}</h2>
+      <ul className={listRows}>
         {registrations.map((registration) => {
           const { event } = registration;
           return (
-            <li key={registration.id} className="registration">
-              <div className="registration__main">
-                <h3 className="registration__name">
-                  <Link to={`/events/${event.id}`}>{event.title}</Link>
+            <li key={registration.id} className={listRow}>
+              <div className="flex min-w-0 flex-col gap-1">
+                <h3 className={listRowTitle}>
+                  <Link to={`/events/${event.id}`} className="no-underline hover:underline">
+                    {event.title}
+                  </Link>
                 </h3>
-                <p className="registration__meta">
+                <p className={listRowMeta}>
                   <time dateTime={event.startsAt}>{formatDateTime(event.startsAt)}</time>
                 </p>
-                <p className="registration__meta">
+                <p className={listRowMeta}>
                   {event.venue} · {event.city} · {formatPrice(event.priceCents)}
                 </p>
               </div>
-              <div className="registration__side">
+              <div className={listRowSide}>
                 {event.isCancelled ? (
-                  <span className="badge badge--full">Événement annulé</span>
+                  <Chip color="danger" variant="soft" size="sm" className="font-semibold">
+                    Événement annulé
+                  </Chip>
                 ) : (
                   <SeatsBadge
                     remainingSeats={event.remainingSeats}
@@ -171,16 +188,16 @@ function RegistrationGroup({ title, registrations, onCancel }: RegistrationGroup
                   />
                 )}
                 {event.isCancelled ? null : onCancel ? (
-                  <button
-                    type="button"
-                    className="button button--ghost button--small"
+                  <Button
+                    variant="danger-soft"
+                    size="sm"
                     aria-label={`Annuler l'inscription à ${event.title}`}
-                    onClick={() => onCancel(registration)}
+                    onPress={() => onCancel(registration)}
                   >
                     Annuler
-                  </button>
+                  </Button>
                 ) : (
-                  <span className="muted">Terminé</span>
+                  <span className="text-sm text-muted">Terminé</span>
                 )}
               </div>
             </li>
@@ -200,33 +217,37 @@ interface WaitlistGroupProps {
 function WaitlistGroup({ entries, leavingId, onLeave }: WaitlistGroupProps) {
   if (entries.length === 0) return null;
   return (
-    <section className="registrations" aria-label="Listes d'attente">
-      <h2 className="registrations__title">Listes d'attente</h2>
-      <ul className="registrations__list">
+    <section className={listSection} aria-label="Listes d'attente">
+      <h2 className={sectionTitle}>Listes d'attente</h2>
+      <ul className={listRows}>
         {entries.map((entry) => {
           const { event } = entry;
           return (
-            <li key={entry.id} className="registration">
-              <div className="registration__main">
-                <h3 className="registration__name">
-                  <Link to={`/events/${event.id}`}>{event.title}</Link>
+            <li key={entry.id} className={listRow}>
+              <div className="flex min-w-0 flex-col gap-1">
+                <h3 className={listRowTitle}>
+                  <Link to={`/events/${event.id}`} className="no-underline hover:underline">
+                    {event.title}
+                  </Link>
                 </h3>
-                <p className="registration__meta">
+                <p className={listRowMeta}>
                   <time dateTime={event.startsAt}>{formatDateTime(event.startsAt)}</time>
                 </p>
-                <p className="registration__meta">Position {entry.position} dans la file</p>
+                <p className={listRowMeta}>Position {entry.position} dans la file</p>
               </div>
-              <div className="registration__side">
-                <span className="badge">En attente</span>
-                <button
-                  type="button"
-                  className="button button--ghost button--small"
-                  disabled={leavingId === entry.id}
+              <div className={listRowSide}>
+                <Chip color="accent" variant="soft" size="sm" className="font-semibold">
+                  En attente
+                </Chip>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  isDisabled={leavingId === entry.id}
                   aria-label={`Quitter la liste d'attente de ${event.title}`}
-                  onClick={() => onLeave(entry)}
+                  onPress={() => onLeave(entry)}
                 >
                   {leavingId === entry.id ? 'Retrait…' : 'Quitter'}
-                </button>
+                </Button>
               </div>
             </li>
           );

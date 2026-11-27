@@ -4,7 +4,7 @@ Plateforme de gestion d'événements : un visiteur consulte le catalogue, un par
 
 | Couche          | Pile                                                                                 |
 | --------------- | ------------------------------------------------------------------------------------ |
-| Front           | React 19 + TypeScript (SPA Vite), React Router, TanStack Query                       |
+| Front           | React 19 + TypeScript (SPA Vite), React Router, TanStack Query, HeroUI v3 + Tailwind |
 | Back            | NestJS 12 + Prisma 7, API REST sous `/api/v1`                                        |
 | Base de données | PostgreSQL 17                                                                        |
 | Contrat         | `contract/openapi.json`, généré par l'API ; types et mocks MSW du Front en découlent |
@@ -204,6 +204,10 @@ Les tests e2e créent la base `eventhub_test` si besoin et refusent de tourner s
 | 2      | US04, US05           | Livré                                 |
 | 3      | US06 à US09          | Livré                                 |
 | 4      | US10 à US14 | US10 à US14 livrées |
+
+Refonte de l'interface : composants HeroUI v3 (React Aria) et Tailwind CSS v4, thème EventHub
+corrigé pour WCAG 2.2 AA (contrastes, bord des champs, lien d'évitement, titre d'onglet par écran,
+focus conservé après la pagination), mode sombre selon le système.
 
 Runbook de l'équipe (#58) : [docs/runbook.md](docs/runbook.md), avec « Démarrer en local », 12 symptômes documentés et le rituel de mise à jour.
 

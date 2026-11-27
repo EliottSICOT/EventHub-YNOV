@@ -1,5 +1,7 @@
+import { Button } from '@heroui/react';
 import { useMutation } from '@tanstack/react-query';
 import { ApiError } from '../../api/client';
+import { Notice } from '../../components/Notice';
 import { downloadRegistrationsCsv } from './downloadRegistrationsCsv';
 
 interface ExportRegistrationsButtonProps {
@@ -28,25 +30,25 @@ export function ExportRegistrationsButton({ eventId }: ExportRegistrationsButton
   const exportCsv = useMutation({ mutationFn: () => downloadRegistrationsCsv(eventId) });
 
   return (
-    <div className="export-registrations">
-      <button
-        type="button"
-        className="button button--ghost button--small"
-        onClick={() => exportCsv.mutate()}
-        disabled={exportCsv.isPending}
+    <div className="flex flex-col items-start gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        onPress={() => exportCsv.mutate()}
+        isDisabled={exportCsv.isPending}
         aria-busy={exportCsv.isPending}
       >
         {exportCsv.isPending ? 'Export en cours…' : 'Exporter en CSV'}
-      </button>
+      </Button>
       {exportCsv.isSuccess && (
-        <p className="notice notice--success" role="status">
+        <Notice tone="success" role="status">
           Fichier {exportCsv.data} téléchargé.
-        </p>
+        </Notice>
       )}
       {exportCsv.isError && (
-        <p className="notice notice--error" role="alert">
+        <Notice tone="danger" role="alert">
           {exportErrorMessage(exportCsv.error)}
-        </p>
+        </Notice>
       )}
     </div>
   );

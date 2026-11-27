@@ -5,6 +5,7 @@ import type {
   SelectHTMLAttributes,
   TextareaHTMLAttributes,
 } from 'react';
+import { fieldError, fieldHint, fieldInput, fieldLabel, fieldTextArea } from '../../components/ui';
 
 /**
  * Champs du formulaire organisateur, sur le modèle de `TextField` (auth) :
@@ -23,16 +24,18 @@ function describedBy({ id, error, hint }: FieldProps) {
 
 function FieldShell({ id, label, error, hint, children }: FieldProps & { children: ReactNode }) {
   return (
-    <div className="field">
-      <label htmlFor={id}>{label}</label>
+    <div className="flex flex-col gap-1.5">
+      <label className={fieldLabel} htmlFor={id}>
+        {label}
+      </label>
       {children}
       {hint && (
-        <p id={`${id}-hint`} className="field__hint">
+        <p id={`${id}-hint`} className={fieldHint}>
           {hint}
         </p>
       )}
       {error && (
-        <p id={`${id}-error`} className="field__error">
+        <p id={`${id}-error`} className={fieldError}>
           {error}
         </p>
       )}
@@ -49,6 +52,7 @@ export function TextAreaField({ id, label, error, hint, ref, ...textarea }: Text
       <textarea
         ref={ref}
         id={id}
+        className={fieldTextArea}
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy({ id, label, error, hint })}
         {...textarea}
@@ -74,6 +78,7 @@ export function SelectField({
       <select
         ref={ref}
         id={id}
+        className={fieldInput}
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy({ id, label, error, hint })}
         {...select}
@@ -96,6 +101,7 @@ export function FileField({ id, label, error, hint, ref, ...input }: FileFieldPr
         ref={ref}
         id={id}
         type="file"
+        className={fieldInput}
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy({ id, label, error, hint })}
         {...input}

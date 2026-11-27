@@ -10,6 +10,9 @@ import {
   type FormErrors,
   type SignUpField,
 } from './validation';
+import { pageSubtitle, pageTitle, textLink } from '../../components/ui';
+import { useDocumentTitle } from '../../app/useDocumentTitle';
+import { Card } from '@heroui/react';
 
 /** Écran « Inscription » (US04) : crée le compte puis connecte automatiquement. */
 export function SignUpPage() {
@@ -17,6 +20,7 @@ export function SignUpPage() {
   const redirect = safeRedirect(searchParams.get('redirect'));
   const navigate = useNavigate();
   const signUp = useSignUp();
+  useDocumentTitle('Créer un compte');
   const signIn = useSignIn();
   const [serverErrors, setServerErrors] = useState<FormErrors<SignUpField>>();
 
@@ -47,19 +51,23 @@ export function SignUpPage() {
   };
 
   return (
-    <section className="page auth">
-      <header className="auth__header">
-        <h1>Créer un compte</h1>
-        <p className="muted">Inscrivez-vous pour réserver vos places.</p>
+    <section className="mx-auto flex w-full max-w-md flex-col gap-6">
+      <header className="flex flex-col gap-1">
+        <h1 className={pageTitle}>Créer un compte</h1>
+        <p className={pageSubtitle}>Inscrivez-vous pour réserver vos places.</p>
       </header>
-      <SignUpForm
-        onSubmit={(values) => void submit(values)}
-        submitting={signUp.isPending || signIn.isPending}
-        serverErrors={serverErrors}
-      />
-      <p className="auth__switch">
+      <Card className="p-6 sm:p-8">
+        <SignUpForm
+          onSubmit={(values) => void submit(values)}
+          submitting={signUp.isPending || signIn.isPending}
+          serverErrors={serverErrors}
+        />
+      </Card>
+      <p className="text-sm text-muted">
         Déjà inscrit ?{' '}
-        <Link to={`/connexion?redirect=${encodeURIComponent(redirect)}`}>Se connecter</Link>
+        <Link to={`/connexion?redirect=${encodeURIComponent(redirect)}`} className={textLink}>
+          Se connecter
+        </Link>
       </p>
     </section>
   );

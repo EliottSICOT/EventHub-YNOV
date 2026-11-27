@@ -1,3 +1,4 @@
+import { Alert } from '@heroui/react';
 import type { ReactNode } from 'react';
 
 interface StatusMessageProps {
@@ -9,9 +10,20 @@ interface StatusMessageProps {
 /** Message d'état partagé : liste vide, erreur, ressource introuvable. */
 export function StatusMessage({ variant = 'info', title, children }: StatusMessageProps) {
   return (
-    <div className={`status status--${variant}`} role={variant === 'error' ? 'alert' : 'status'}>
-      <p className="status__title">{title}</p>
-      {children && <div className="status__body">{children}</div>}
-    </div>
+    <Alert
+      status={variant === 'error' ? 'danger' : 'default'}
+      role={variant === 'error' ? 'alert' : 'status'}
+      className="mx-auto my-6 max-w-2xl p-5"
+    >
+      <Alert.Indicator aria-hidden="true" />
+      <Alert.Content>
+        <Alert.Title className="text-base font-bold">{title}</Alert.Title>
+        {children && (
+          <div className="mt-2 flex flex-col items-start gap-3 text-sm text-foreground">
+            {children}
+          </div>
+        )}
+      </Alert.Content>
+    </Alert>
   );
 }

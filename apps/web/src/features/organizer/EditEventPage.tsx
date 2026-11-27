@@ -10,6 +10,9 @@ import { errorsFromApi, type FormErrors } from '../auth/validation';
 import { imageErrorMessage, useUpdateEvent, useUploadEventImage } from './api';
 import { CreateEventForm } from './CreateEventForm';
 import { EVENT_FIELDS, toEventFormValues, type EventField } from './eventForm';
+import { Button, Card } from '@heroui/react';
+import { pageSubtitle, pageTitle, textLink } from '../../components/ui';
+import { useDocumentTitle } from '../../app/useDocumentTitle';
 
 /** État transmis à la page détail après une modification (US09). */
 export interface UpdatedEventState {
@@ -39,9 +42,7 @@ export function EditEventPage() {
       <Refusal title="Événement introuvable" message="Cet événement n'existe pas." />
     ) : (
       <StatusMessage variant="error" title="Impossible de charger l'événement">
-        <button type="button" className="button" onClick={() => void refetch()}>
-          Réessayer
-        </button>
+        <Button onPress={() => void refetch()}>Réessayer</Button>
       </StatusMessage>
     );
   }
@@ -88,9 +89,13 @@ function Refusal({
     <StatusMessage variant="error" title={title}>
       <p>{message}</p>
       {eventId ? (
-        <Link to={`/events/${eventId}`}>Voir l'événement</Link>
+        <Link to={`/events/${eventId}`} className={textLink}>
+          Voir l'événement
+        </Link>
       ) : (
-        <Link to="/events">Voir les événements</Link>
+        <Link to="/events" className={textLink}>
+          Voir les événements
+        </Link>
       )}
     </StatusMessage>
   );
@@ -100,6 +105,7 @@ function EditEvent({ event }: { event: EventDetail }) {
   const navigate = useNavigate();
   const categories = useCategories();
   const updateEvent = useUpdateEvent(event.id);
+  useDocumentTitle(`Modifier « ${event.title} »`);
   const uploadImage = useUploadEventImage();
   const [serverErrors, setServerErrors] = useState<FormErrors<EventField>>();
 
@@ -123,29 +129,31 @@ function EditEvent({ event }: { event: EventDetail }) {
   };
 
   return (
-    <section className="page organizer">
-      <header className="auth__header">
-        <h1>Modifier un événement</h1>
-        <p className="muted">Les modifications sont visibles aussitôt dans le catalogue.</p>
+    <section className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+      <header className="flex flex-col gap-1">
+        <h1 className={pageTitle}>Modifier un événement</h1>
+        <p className={pageSubtitle}>Les modifications sont visibles aussitôt dans le catalogue.</p>
       </header>
       {categories.isError ? (
         <StatusMessage variant="error" title="Impossible de charger les catégories">
-          <button type="button" className="button" onClick={() => void categories.refetch()}>
-            Réessayer
-          </button>
+          <Button onPress={() => void categories.refetch()}>Réessayer</Button>
         </StatusMessage>
       ) : (
-        <CreateEventForm
-          categories={categories.data}
-          initialValues={toEventFormValues(event)}
-          labels={EDIT_LABELS}
-          onSubmit={(input, image) => void submit(input, image)}
-          submitting={updateEvent.isPending || uploadImage.isPending}
-          serverErrors={serverErrors}
-        />
+        <Card className="p-6 sm:p-8">
+          <CreateEventForm
+            categories={categories.data}
+            initialValues={toEventFormValues(event)}
+            labels={EDIT_LABELS}
+            onSubmit={(input, image) => void submit(input, image)}
+            submitting={updateEvent.isPending || uploadImage.isPending}
+            serverErrors={serverErrors}
+          />
+        </Card>
       )}
-      <p className="auth__switch">
-        <Link to={`/events/${event.id}`}>Annuler et revenir à l'événement</Link>
+      <p className="text-sm text-muted">
+        <Link to={`/events/${event.id}`} className={textLink}>
+          Annuler et revenir à l'événement
+        </Link>
       </p>
     </section>
   );

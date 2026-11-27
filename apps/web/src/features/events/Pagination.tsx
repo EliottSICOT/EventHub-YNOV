@@ -1,3 +1,5 @@
+import { Button } from '@heroui/react';
+
 interface PaginationProps {
   page: number;
   totalPages: number;
@@ -7,26 +9,20 @@ interface PaginationProps {
 export function Pagination({ page, totalPages, onPageChange }: PaginationProps) {
   if (totalPages <= 1) return null;
   return (
-    <nav className="pagination" aria-label="Pagination">
-      <button
-        type="button"
-        className="button"
-        disabled={page <= 1}
-        onClick={() => onPageChange(page - 1)}
-      >
+    <nav className="mt-8 flex items-center justify-center gap-4" aria-label="Pagination">
+      <Button variant="outline" isDisabled={page <= 1} onPress={() => onPageChange(page - 1)}>
         Précédent
-      </button>
-      <span aria-current="page">
+      </Button>
+      <span className="text-sm font-semibold text-foreground">
         Page {page} sur {totalPages}
       </span>
-      <button
-        type="button"
-        className="button"
-        disabled={page >= totalPages}
-        onClick={() => onPageChange(page + 1)}
+      <Button
+        variant="outline"
+        isDisabled={page >= totalPages}
+        onPress={() => onPageChange(page + 1)}
       >
         Suivant
-      </button>
+      </Button>
     </nav>
   );
 }

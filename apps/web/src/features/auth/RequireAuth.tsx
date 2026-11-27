@@ -3,7 +3,9 @@ import { Link, Navigate, Outlet, useLocation } from 'react-router';
 import type { Role } from '../../api/types';
 import { Spinner } from '../../components/Spinner';
 import { StatusMessage } from '../../components/StatusMessage';
+import { textLink } from '../../components/ui';
 import { useMe } from './api';
+import { Button } from '@heroui/react';
 
 interface RequireAuthProps {
   /** Rôle exigé, par exemple `ORGANIZER` pour les écrans organisateur (US08). */
@@ -28,9 +30,7 @@ export function RequireAuth({ role, children }: RequireAuthProps) {
   if (isError) {
     return (
       <StatusMessage variant="error" title="Impossible de vérifier votre session">
-        <button type="button" className="button" onClick={() => void refetch()}>
-          Réessayer
-        </button>
+        <Button onPress={() => void refetch()}>Réessayer</Button>
       </StatusMessage>
     );
   }
@@ -46,7 +46,9 @@ export function RequireAuth({ role, children }: RequireAuthProps) {
         <p>
           Cette page est réservée aux {role === 'ORGANIZER' ? 'organisateurs' : 'participants'}.
         </p>
-        <Link to="/events">Voir les événements</Link>
+        <Link to="/events" className={textLink}>
+          Voir les événements
+        </Link>
       </StatusMessage>
     );
   }
