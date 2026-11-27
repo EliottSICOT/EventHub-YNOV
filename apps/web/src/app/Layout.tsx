@@ -1,9 +1,10 @@
-import { Link, Outlet } from 'react-router';
+import { Link, Outlet, useLocation } from 'react-router';
 import { SessionMenu } from '../features/auth/SessionMenu';
 import { BackgroundGlow, BackgroundMotionToggle, useBackgroundMotion } from './BackgroundGlow';
 
 export function Layout() {
   const motion = useBackgroundMotion();
+  const { pathname } = useLocation();
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -36,7 +37,10 @@ export function Layout() {
         tabIndex={-1}
         className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 outline-none sm:px-6"
       >
-        <Outlet />
+        {/* Transition d'entrée à chaque changement de page (pas sur un simple filtre ou une page de liste). */}
+        <div key={pathname} className="page-enter">
+          <Outlet />
+        </div>
       </main>
       <footer className="border-t border-separator bg-surface backdrop-blur-2xl">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4 text-sm text-muted sm:px-6">

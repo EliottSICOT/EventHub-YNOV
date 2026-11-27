@@ -255,6 +255,11 @@
     animation-duration: 115s;
     animation-delay: -40s;
   }
+  /* Transition entre les pages : fondu, léger glissement et flou qui se dissipe. */
+  .page-enter {
+    animation: page-enter 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
   .glow-layer[data-paused='true'] .glow {
     animation-play-state: paused;
   }
@@ -320,6 +325,19 @@
   .stretched-link:focus-visible::after {
     outline: 2px solid var(--focus);
     outline-offset: 2px;
+  }
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0) scale(0.995);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
   }
 }
 
@@ -440,7 +458,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .glow {
+  .glow,
+  .page-enter {
     animation: none !important;
   }
 
