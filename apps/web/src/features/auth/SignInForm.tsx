@@ -1,3 +1,4 @@
+import { Button } from '@heroui/react';
 import { useId, useState, type ChangeEvent, type FormEvent } from 'react';
 import type { SignInInput } from '../../api/types';
 import { TextField } from './TextField';
@@ -49,9 +50,14 @@ export function SignInForm({
   };
 
   return (
-    <form className="form" onSubmit={submit} noValidate aria-label="Connexion">
+    <form className="flex flex-col gap-5" onSubmit={submit} noValidate aria-label="Connexion">
       {errors.form && (
-        <p ref={formAlertRef} className="form__alert" role="alert" tabIndex={-1}>
+        <p
+          ref={formAlertRef}
+          className="rounded-xl border border-danger bg-danger-soft px-4 py-3 text-sm font-medium text-danger-soft-foreground"
+          role="alert"
+          tabIndex={-1}
+        >
           {errors.form}
         </p>
       )}
@@ -75,9 +81,9 @@ export function SignInForm({
         onChange={change('password')}
         error={errors.fields.password}
       />
-      <button type="submit" className="button form__submit" disabled={submitting}>
+      <Button type="submit" size="lg" className="mt-2 self-start" isDisabled={submitting}>
         {submitting ? 'Connexion…' : 'Se connecter'}
-      </button>
+      </Button>
     </form>
   );
 }

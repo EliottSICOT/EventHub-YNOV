@@ -11,6 +11,9 @@ import {
   type FormErrors,
   type SignInField,
 } from './validation';
+import { pageTitle, textLink } from '../../components/ui';
+import { useDocumentTitle } from '../../app/useDocumentTitle';
+import { Card } from '@heroui/react';
 
 interface SignInLocationState {
   accountCreated?: boolean;
@@ -24,6 +27,7 @@ export function SignInPage() {
   const state = (useLocation().state ?? {}) as SignInLocationState;
   const navigate = useNavigate();
   const signIn = useSignIn();
+  useDocumentTitle('Connexion');
   const [serverErrors, setServerErrors] = useState<FormErrors<SignInField>>();
 
   const submit = async (values: SignInInput) => {
@@ -37,24 +41,28 @@ export function SignInPage() {
   };
 
   return (
-    <section className="page auth">
-      <header className="auth__header">
-        <h1>Connexion</h1>
+    <section className="mx-auto flex w-full max-w-md flex-col gap-6">
+      <header className="flex flex-col gap-1">
+        <h1 className={pageTitle}>Connexion</h1>
       </header>
       {state.accountCreated && (
         <StatusMessage title="Votre compte est créé">
           <p>Connectez-vous pour continuer.</p>
         </StatusMessage>
       )}
-      <SignInForm
-        onSubmit={(values) => void submit(values)}
-        submitting={signIn.isPending}
-        serverErrors={serverErrors}
-        defaultEmail={state.email}
-      />
-      <p className="auth__switch">
+      <Card className="p-6 sm:p-8">
+        <SignInForm
+          onSubmit={(values) => void submit(values)}
+          submitting={signIn.isPending}
+          serverErrors={serverErrors}
+          defaultEmail={state.email}
+        />
+      </Card>
+      <p className="text-sm text-muted">
         Pas encore de compte ?{' '}
-        <Link to={`/inscription?redirect=${encodeURIComponent(redirect)}`}>Créer un compte</Link>
+        <Link to={`/inscription?redirect=${encodeURIComponent(redirect)}`} className={textLink}>
+          Créer un compte
+        </Link>
       </p>
     </section>
   );

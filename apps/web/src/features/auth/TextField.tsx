@@ -1,4 +1,5 @@
 import type { InputHTMLAttributes, Ref } from 'react';
+import { fieldError, fieldHint, fieldInput, fieldLabel } from '../../components/ui';
 
 interface TextFieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'id'> {
   id: string;
@@ -16,22 +17,25 @@ export function TextField({ id, label, error, hint, ref, ...input }: TextFieldPr
   const describedBy = [errorId, hintId].filter(Boolean).join(' ') || undefined;
 
   return (
-    <div className="field">
-      <label htmlFor={id}>{label}</label>
+    <div className="flex flex-col gap-1.5">
+      <label className={fieldLabel} htmlFor={id}>
+        {label}
+      </label>
       <input
         ref={ref}
         id={id}
+        className={fieldInput}
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy}
         {...input}
       />
       {hint && (
-        <p id={hintId} className="field__hint">
+        <p id={hintId} className={fieldHint}>
           {hint}
         </p>
       )}
       {error && (
-        <p id={errorId} className="field__error">
+        <p id={errorId} className={fieldError}>
           {error}
         </p>
       )}
