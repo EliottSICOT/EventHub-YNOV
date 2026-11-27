@@ -1,8 +1,11 @@
+import { Button } from '@heroui/react';
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { ApiError } from '../../api/client';
 import type { EventDetail } from '../../api/types';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { Notice } from '../../components/Notice';
+import { linkButton } from '../../components/ui';
 import { useMe } from '../auth/api';
 import { formatDateTime } from '../events/format';
 import { useDeleteEvent } from './api';
@@ -41,41 +44,45 @@ export function EventActions({ event, now: nowProp }: EventActionsProps) {
   return (
     <>
       {deleteEvent.isSuccess && (
-        <p className="notice notice--success" role="status">
+        <Notice tone="success" role="status">
           Événement supprimé : il n'apparaît plus dans le catalogue, et ses inscrits le voient «
           Événement annulé ».
-        </p>
+        </Notice>
       )}
       {deleteEvent.isError && (
-        <p className="notice notice--error" role="alert">
+        <Notice tone="danger" role="alert">
           {deleteErrorMessage(deleteEvent.error)}
-        </p>
+        </Notice>
       )}
       {isOrganizer && (
-        <div className="event-actions">
+        <div
+          className="flex flex-wrap items-start gap-2 rounded-2xl border border-separator bg-surface p-3"
+          role="group"
+          aria-label="Gérer cet événement"
+        >
           {manageable && (
             <>
               <Link
                 to={`/organisateur/evenements/${event.id}/modifier`}
-                className="button button--small"
+                className={linkButton('primary', 'sm')}
               >
                 Modifier
               </Link>
-              <button
-                type="button"
-                className="button button--ghost button--small"
-                onClick={() => {
+              <Button
+                variant="danger-soft"
+                size="sm"
+                onPress={() => {
                   deleteEvent.reset();
                   setConfirming(true);
                 }}
               >
                 Supprimer
-              </button>
+              </Button>
             </>
           )}
           <Link
             to={`/organisateur/evenements/${event.id}/inscrits`}
-            className="button button--ghost button--small"
+            className={linkButton('outline', 'sm')}
           >
             Voir les inscrits
           </Link>
