@@ -18,12 +18,14 @@ export function Layout() {
             to="/events"
             className="flex items-center gap-2 rounded-lg text-xl font-extrabold tracking-tight text-foreground no-underline"
           >
-            <span
-              aria-hidden="true"
-              className="brand-mark grid size-8 place-items-center rounded-lg text-sm font-black"
-            >
-              E
-            </span>
+            {/* Icône décorative : le nom « EventHub » qui suit donne le nom du lien. */}
+            <img
+              src="/logo-icon.png"
+              alt=""
+              width={45}
+              height={36}
+              className="h-9 w-auto drop-shadow-[0_4px_12px_rgb(124_58_237_/_0.35)]"
+            />
             EventHub
           </Link>
           <SessionMenu />
