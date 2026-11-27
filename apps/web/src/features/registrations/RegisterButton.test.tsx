@@ -1,7 +1,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http as mswHttp, HttpResponse } from 'msw';
-import { DEMO_PASSWORD, demoUsers, mockAuth } from '../../mocks/auth';
+import { DEMO_PASSWORD, mockAuth } from '../../mocks/auth';
 import { events } from '../../mocks/fixtures';
 import { createHandlers } from '../../mocks/handlers';
 import { mockRegistrations } from '../../mocks/registrations';
@@ -63,13 +63,24 @@ describe('Inscription à un événement (US05, Front)', () => {
 
   it("n'annonce aucun e-mail quand l'inscription est refusée (US11)", async () => {
     signIn();
-    mockRegistrations.add(open.id, demoUsers[0].id);
+    // Depuis US14, une inscription existante est connue du Front (« Inscrit ✓ ») :
+    // on simule donc un refus de l'API au moment du clic.
+    server.use(
+      mswHttp.post('*/api/v1/events/:id/registrations', () =>
+        HttpResponse.json(
+          { statusCode: 409, error: 'Conflict', message: 'Vous êtes déjà inscrit à cet événement' },
+          { status: 409 },
+        ),
+      ),
+    );
     const user = userEvent.setup();
     renderApp(`/events/${open.id}`);
 
     await user.click(await screen.findByRole('button', { name: "S'inscrire" }));
 
-    await screen.findByRole('alert');
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Vous êtes déjà inscrit à cet événement',
+    );
     expect(screen.queryByText(/e-mail de confirmation/)).not.toBeInTheDocument();
   });
 
@@ -119,18 +130,16 @@ describe('Inscription à un événement (US05, Front)', () => {
     signIn();
     const user = userEvent.setup();
     renderApp(`/events/${full.id}`);
-    expect(
-      await screen.findByRole('button', { name: "Rejoindre la liste d'attente" }),
-    ).toBeEnabled();
+    const join = await screen.findByRole('button', { name: "Rejoindre la liste d'attente" });
+    // Le bouton reste désactivé tant que la liste d'attente de l'utilisateur n'est pas chargée.
+    await waitFor(() => expect(join).toBeEnabled());
     expect(screen.queryByRole('button', { name: "S'inscrire" })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: "Rejoindre la liste d'attente" }));
     expect(await screen.findByRole('status')).toHaveTextContent(
       "Vous êtes en liste d'attente (position 1)",
     );
-    expect(
-      screen.getByRole('button', { name: "Quitter la liste d'attente" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: "Quitter la liste d'attente" })).toBeInTheDocument();
   });
 
   it('affiche « Événement terminé » pour un événement passé', async () => {
