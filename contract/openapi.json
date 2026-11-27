@@ -1460,7 +1460,7 @@
                     "value": {
                       "statusCode": 409,
                       "error": "Conflict",
-                      "message": "Vous êtes déjà sur la liste d’attente de cet événement",
+                      "message": "Vous êtes déjà sur la liste d'attente de cet événement",
                       "path": "/api/v1/events/3f0c1a52-6a3e-4b8e-9a43-0d7f1e2b9c11/waitlist",
                       "timestamp": "2026-11-20T10:33:21.774Z"
                     }

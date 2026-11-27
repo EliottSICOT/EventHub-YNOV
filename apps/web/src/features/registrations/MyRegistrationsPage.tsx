@@ -7,12 +7,7 @@ import { Spinner } from '../../components/Spinner';
 import { StatusMessage } from '../../components/StatusMessage';
 import { formatDateTime, formatPrice } from '../events/format';
 import { SeatsBadge } from '../events/SeatsBadge';
-import {
-  useCancelRegistration,
-  useLeaveWaitlist,
-  useMyRegistrations,
-  useMyWaitlist,
-} from './api';
+import { useCancelRegistration, useLeaveWaitlist, useMyRegistrations, useMyWaitlist } from './api';
 
 /** Message affiché quand l'annulation échoue. */
 function cancelErrorMessage(error: unknown): string {

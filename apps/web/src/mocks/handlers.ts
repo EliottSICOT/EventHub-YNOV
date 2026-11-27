@@ -131,22 +131,8 @@ export function createHandlers(events = defaultEvents, categories = defaultCateg
       });
     }),
 
-    http.get('/api/v1/events/{id}', ({ params, request, response }) => {
-      const event = allEvents().find((e) => e.id === params.id);
-      if (!event) {
-        return response(404).json(
-          errorBody(
-            404,
-            'Not Found',
-            "L'événement demandé n'existe pas",
-            new URL(request.url).pathname,
-          ),
-        );
-      }
-      return response(200).json(withRegistrations(event));
-    }),
-
     // US12 : événements de l'organisateur connecté, passés compris.
+    // Déclaré avant `/events/{id}`, sinon MSW prend « me » pour un identifiant (comme l'API).
     http.get('/api/v1/events/me', ({ request, response }) => {
       const path = new URL(request.url).pathname;
       const user = mockAuth.currentUser;
@@ -180,6 +166,21 @@ export function createHandlers(events = defaultEvents, categories = defaultCateg
         })
         .sort((a, b) => a.startsAt.localeCompare(b.startsAt) || a.id.localeCompare(b.id));
       return response(200).json(mine);
+    }),
+
+    http.get('/api/v1/events/{id}', ({ params, request, response }) => {
+      const event = allEvents().find((e) => e.id === params.id);
+      if (!event) {
+        return response(404).json(
+          errorBody(
+            404,
+            'Not Found',
+            "L'événement demandé n'existe pas",
+            new URL(request.url).pathname,
+          ),
+        );
+      }
+      return response(200).json(withRegistrations(event));
     }),
 
     http.post('/api/v1/events/{id}/registrations', ({ params, request, response }) => {

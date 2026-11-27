@@ -37,10 +37,13 @@ describe("Détail d'un événement (US03)", () => {
     ).toHaveAttribute('src', '/images/meetup.jpg');
   });
 
-  it('remplace le bouton par « Complet » pour un événement complet', async () => {
+  it("propose la liste d'attente au lieu de l'inscription pour un événement complet (US14)", async () => {
     const full = events.find((e) => e.isFull)!;
     renderApp(`/events/${full.id}`);
-    expect(await screen.findByRole('button', { name: 'Complet' })).toBeDisabled();
+    expect(
+      await screen.findByRole('link', { name: "Rejoindre la liste d'attente" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: "S'inscrire" })).not.toBeInTheDocument();
   });
 
   it("n'affiche pas « Complet » quand il reste des places", async () => {
