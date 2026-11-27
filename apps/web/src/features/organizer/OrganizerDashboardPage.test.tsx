@@ -8,7 +8,8 @@ import { renderApp } from '../../test/render';
 
 const [, organizer] = demoUsers;
 const DAY = 24 * 60 * 60 * 1000;
-const upcoming = events.find((e) => e.organizer.id === organizer.id)!;
+// Un événement avec des places : l'inscription ajoutée dans le test doit faire monter le compteur.
+const upcoming = events.find((e) => e.organizer.id === organizer.id && !e.isFull)!;
 
 describe('Tableau de bord organisateur (US12)', () => {
   it('refuse un participant', async () => {
@@ -37,7 +38,9 @@ describe('Tableau de bord organisateur (US12)', () => {
     expect(await screen.findByRole('heading', { name: 'Mes événements' })).toBeInTheDocument();
 
     const upcomingSection = await screen.findByRole('region', { name: 'À venir' });
-    const upcomingRow = within(upcomingSection).getByRole('link', { name: upcoming.title }).closest('li')!;
+    const upcomingRow = within(upcomingSection)
+      .getByRole('link', { name: upcoming.title })
+      .closest('li')!;
     const registered = upcoming.capacity - upcoming.remainingSeats + 1;
     expect(upcomingRow).toHaveTextContent(
       `${registered} / ${upcoming.capacity} ${registered === 1 ? 'inscrit' : 'inscrits'}`,
