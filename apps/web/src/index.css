@@ -2,27 +2,35 @@
 @import '@heroui/styles';
 
 /*
- * Thème EventHub, par-dessus le thème par défaut de HeroUI.
- * Les couleurs sont choisies pour WCAG 2.2 AA : texte ≥ 4,5:1 (boutons, puces, texte secondaire)
- * et bord des champs ≥ 3:1 (1.4.11), en clair comme en sombre. Le thème par défaut de HeroUI
- * n'y arrive pas partout (texte blanc sur l'accent bleu, champs sans bord) : on le corrige ici.
+ * Thème EventHub « premium », par-dessus le thème par défaut de HeroUI :
+ * noir en couleur principale (inversé en blanc en mode sombre, pour rester visible),
+ * fond à dégradés doux, surfaces en verre dépoli très opaque.
+ *
+ * Accessibilité (WCAG 2.2 AA), contrastes calculés dans le pire cas (verre posé sur la zone
+ * la plus colorée du fond) : texte ≥ 4,5:1, bord des champs ≥ 3:1 (1.4.11), en clair comme
+ * en sombre. Le verre reste opaque à 82 % : le fond ne gêne jamais la lecture.
  */
 :root,
 .light,
 [data-theme='light'] {
-  --background: #f6f6fb;
-  --foreground: #1b1b2f;
-  --surface: #ffffff;
-  --surface-foreground: #1b1b2f;
-  --overlay: #ffffff;
-  --overlay-foreground: #1b1b2f;
-  --muted: #5d5d78;
-  --border: #e1e1ee;
-  --separator: #e1e1ee;
+  --background: #f4f4f7;
+  --foreground: #0b0b12;
+  /* Verre : blanc à 82 %, flouté (voir .card, .surface plus bas). */
+  --surface: rgb(255 255 255 / 0.82);
+  --surface-foreground: #0b0b12;
+  --surface-secondary: rgb(244 244 247 / 0.9);
+  --overlay: rgb(255 255 255 / 0.94);
+  --overlay-foreground: #0b0b12;
+  --muted: #55556b;
+  --border: rgb(11 11 18 / 0.08);
+  --separator: rgb(11 11 18 / 0.08);
+  --default: rgb(11 11 18 / 0.06);
+  --default-foreground: #0b0b12;
 
-  --accent: #4f46e5;
+  --accent: #0b0b12;
   --accent-foreground: #ffffff;
-  --accent-soft-foreground: #4338ca;
+  --accent-soft: rgb(11 11 18 / 0.07);
+  --accent-soft-foreground: #0b0b12;
   --success: #1d6b3a;
   --success-foreground: #ffffff;
   --success-soft-foreground: #1d6b3a;
@@ -34,46 +42,80 @@
   --danger-soft-foreground: #a11d1d;
 
   --field-background: #ffffff;
-  --field-foreground: #1b1b2f;
-  --field-placeholder: #6b6b85;
-  --field-border: #7c7c96;
+  --field-foreground: #0b0b12;
+  --field-placeholder: #66667a;
+  --field-border: #77778c;
   --field-border-width: 1px;
-  --focus: #4f46e5;
-  --link: #4f46e5;
-  --radius: 0.75rem;
+  --focus: #0b0b12;
+  --link: #0b0b12;
+  --radius: 0.875rem;
+
+  /* Effets premium */
+  --glass-border: rgb(255 255 255 / 0.7);
+  --glass-highlight: inset 0 1px 0 rgb(255 255 255 / 0.9);
+  --glass-shadow: 0 1px 2px rgb(11 11 18 / 0.04), 0 12px 40px -12px rgb(11 11 18 / 0.18);
+  --primary-gradient: linear-gradient(180deg, #2a2a36 0%, #0b0b12 55%, #000000 100%);
+  --primary-gradient-hover: linear-gradient(180deg, #3a3a48 0%, #16161f 55%, #050507 100%);
+  --primary-shadow: inset 0 1px 0 rgb(255 255 255 / 0.18), 0 8px 20px -8px rgb(11 11 18 / 0.55);
+  --title-gradient: linear-gradient(120deg, #0b0b12 0%, #1f1d3a 45%, #3730a3 100%);
+  --fill-gradient: linear-gradient(90deg, #0b0b12, #4338ca);
+  --app-gradient:
+    radial-gradient(60rem 40rem at 10% -10%, rgb(129 140 248 / 0.28), transparent 60%),
+    radial-gradient(50rem 35rem at 95% 0%, rgb(244 114 182 / 0.18), transparent 60%),
+    radial-gradient(60rem 40rem at 50% 110%, rgb(45 212 191 / 0.14), transparent 60%),
+    linear-gradient(180deg, #f7f7fa 0%, #efeff4 100%);
 }
 
 .dark,
 [data-theme='dark'] {
-  --background: #12121c;
-  --foreground: #ececf5;
-  --surface: #1c1c2a;
-  --surface-foreground: #ececf5;
-  --overlay: #222233;
-  --overlay-foreground: #ececf5;
-  --muted: #a3a3bd;
-  --border: #2e2e42;
-  --separator: #2e2e42;
+  --background: #07070b;
+  --foreground: #f4f4f8;
+  --surface: rgb(22 22 31 / 0.82);
+  --surface-foreground: #f4f4f8;
+  --surface-secondary: rgb(30 30 42 / 0.9);
+  --overlay: rgb(22 22 31 / 0.95);
+  --overlay-foreground: #f4f4f8;
+  --muted: #a8a8bd;
+  --border: rgb(255 255 255 / 0.09);
+  --separator: rgb(255 255 255 / 0.09);
+  --default: rgb(255 255 255 / 0.08);
+  --default-foreground: #f4f4f8;
 
-  --accent: #a29dff;
-  --accent-foreground: #12121c;
-  --accent-soft-foreground: #b8b4ff;
+  /* En sombre, la couleur principale s'inverse : un bouton noir serait invisible. */
+  --accent: #f4f4f8;
+  --accent-foreground: #0b0b12;
+  --accent-soft: rgb(255 255 255 / 0.1);
+  --accent-soft-foreground: #f4f4f8;
   --success: #8fdcaa;
-  --success-foreground: #12121c;
+  --success-foreground: #0b0b12;
   --success-soft-foreground: #8fdcaa;
   --warning: #ffc27a;
-  --warning-foreground: #12121c;
+  --warning-foreground: #0b0b12;
   --warning-soft-foreground: #ffc27a;
   --danger: #ff9b9b;
-  --danger-foreground: #12121c;
+  --danger-foreground: #0b0b12;
   --danger-soft-foreground: #ff9b9b;
 
-  --field-background: #1c1c2a;
-  --field-foreground: #ececf5;
-  --field-placeholder: #9d9db8;
-  --field-border: #8484a3;
-  --focus: #a29dff;
-  --link: #a29dff;
+  --field-background: #16161f;
+  --field-foreground: #f4f4f8;
+  --field-placeholder: #9d9db3;
+  --field-border: #85859e;
+  --focus: #ffffff;
+  --link: #f4f4f8;
+
+  --glass-border: rgb(255 255 255 / 0.09);
+  --glass-highlight: inset 0 1px 0 rgb(255 255 255 / 0.06);
+  --glass-shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 16px 48px -16px rgb(0 0 0 / 0.7);
+  --primary-gradient: linear-gradient(180deg, #ffffff 0%, #e8e8ef 60%, #d4d4de 100%);
+  --primary-gradient-hover: linear-gradient(180deg, #ffffff 0%, #f1f1f6 60%, #e0e0e8 100%);
+  --primary-shadow: inset 0 1px 0 rgb(255 255 255 / 0.9), 0 8px 24px -10px rgb(196 181 253 / 0.45);
+  --title-gradient: linear-gradient(120deg, #ffffff 0%, #e4e1ff 50%, #c4b5fd 100%);
+  --fill-gradient: linear-gradient(90deg, #ffffff, #c4b5fd);
+  --app-gradient:
+    radial-gradient(55rem 38rem at 8% -10%, rgb(99 102 241 / 0.3), transparent 60%),
+    radial-gradient(45rem 32rem at 100% 5%, rgb(217 70 239 / 0.16), transparent 60%),
+    radial-gradient(60rem 40rem at 50% 115%, rgb(20 184 166 / 0.12), transparent 60%),
+    linear-gradient(180deg, #0a0a10 0%, #050508 100%);
 }
 
 @layer base {
@@ -92,6 +134,8 @@
 
   body {
     min-height: 100vh;
+    background: var(--app-gradient);
+    background-attachment: fixed;
   }
 
   /* Focus visible partout, y compris sur les éléments natifs (2.4.7). */
@@ -129,6 +173,57 @@
 }
 
 @layer components {
+  /* Verre dépoli très opaque sur les surfaces HeroUI (cartes, panneaux, alertes). */
+  .card,
+  .surface,
+  .glass {
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-highlight), var(--glass-shadow);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
+    backdrop-filter: blur(24px) saturate(160%);
+  }
+  .alert {
+    -webkit-backdrop-filter: blur(20px) saturate(150%);
+    backdrop-filter: blur(20px) saturate(150%);
+  }
+
+  /* Bouton principal : dégradé noir, reflet en haut et ombre portée. */
+  .button--primary {
+    background-image: var(--primary-gradient);
+    box-shadow: var(--primary-shadow);
+  }
+  .button--primary:hover,
+  .button--primary[data-hovered='true'] {
+    background-image: var(--primary-gradient-hover);
+  }
+
+  /* Titre en dégradé : les deux extrémités dépassent 4,5:1 sur le fond. */
+  .text-gradient {
+    background-image: var(--title-gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Bandeau d'un événement sans image (décoratif). */
+  .gradient-banner {
+    background:
+      radial-gradient(40rem 20rem at 85% 0%, rgb(217 70 239 / 0.45), transparent 60%),
+      radial-gradient(35rem 20rem at 0% 100%, rgb(45 212 191 / 0.3), transparent 60%),
+      linear-gradient(135deg, #0b0b12 0%, #1e1b4b 55%, #4c1d95 100%);
+    color: #ffffff;
+  }
+
+  .brand-mark {
+    background: linear-gradient(135deg, #0b0b12 0%, #312e81 60%, #7c3aed 100%);
+    color: #ffffff;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.25);
+  }
+
+  .fill-gradient {
+    background-image: var(--fill-gradient);
+  }
+
   /* Lien d'évitement (2.4.1) : visible seulement au focus clavier. */
   .skip-link {
     position: absolute;
@@ -159,6 +254,29 @@
   .stretched-link:focus-visible::after {
     outline: 2px solid var(--focus);
     outline-offset: 2px;
+  }
+}
+
+/* Contraste élevé de Windows : on retire dégradés et transparences pour les couleurs système. */
+@media (forced-colors: active) {
+  .text-gradient {
+    background: none;
+    color: CanvasText;
+  }
+  .card,
+  .surface,
+  .glass {
+    backdrop-filter: none;
+  }
+}
+
+/* Transparence réduite demandée par le système : surfaces pleines. */
+@media (prefers-reduced-transparency: reduce) {
+  .card,
+  .surface,
+  .glass {
+    backdrop-filter: none;
+    background-color: var(--field-background);
   }
 }
 

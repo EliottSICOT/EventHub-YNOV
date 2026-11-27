@@ -24,7 +24,8 @@ export const fieldHint = 'description text-sm text-muted';
 export const fieldError = 'field-error text-sm font-medium text-danger-soft-foreground';
 
 /** Conteneur de page et titres. */
-export const pageTitle = 'text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl';
+/** Titre de page en dégradé (contraste vérifié aux deux extrémités, repli en contraste élevé). */
+export const pageTitle = 'text-gradient text-3xl font-extrabold tracking-tight sm:text-4xl pb-1';
 export const pageSubtitle = 'mt-1 text-muted';
 export const sectionTitle = 'text-lg font-bold text-foreground';
 
@@ -32,7 +33,7 @@ export const sectionTitle = 'text-lg font-bold text-foreground';
 export const listSection = 'flex flex-col gap-3';
 export const listRows = 'flex flex-col gap-3';
 export const listRow =
-  'flex flex-col gap-4 rounded-2xl border border-separator bg-surface p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between';
+  'glass flex flex-col gap-4 rounded-2xl bg-surface p-5 sm:flex-row sm:items-center sm:justify-between';
 export const listRowTitle = 'text-base font-bold text-foreground';
 export const listRowMeta = 'text-sm text-muted';
 export const listRowSide = 'flex flex-wrap items-center gap-2 sm:justify-end';

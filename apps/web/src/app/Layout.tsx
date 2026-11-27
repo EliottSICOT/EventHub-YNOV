@@ -8,7 +8,7 @@ export function Layout() {
       <a href="#contenu" className="skip-link">
         Aller au contenu
       </a>
-      <header className="sticky top-0 z-40 border-b border-separator bg-surface/90 backdrop-blur">
+      <header className="sticky top-0 z-40 border-b border-separator bg-surface backdrop-blur-2xl backdrop-saturate-150">
         <div className="mx-auto flex min-h-16 max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-2 sm:px-6">
           <Link
             to="/events"
@@ -16,7 +16,7 @@ export function Layout() {
           >
             <span
               aria-hidden="true"
-              className="grid size-8 place-items-center rounded-lg bg-accent text-sm font-black text-accent-foreground"
+              className="brand-mark grid size-8 place-items-center rounded-lg text-sm font-black"
             >
               E
             </span>
