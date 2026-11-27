@@ -1,7 +1,23 @@
-import { Link, useLocation, useNavigate } from 'react-router';
+import { Button } from '@heroui/react';
+import { NavLink, useLocation, useNavigate, type NavLinkProps } from 'react-router';
+import { linkButton } from '../../components/ui';
 import { useMe, useSignOut } from './api';
 
 const AUTH_PAGES = ['/connexion', '/inscription'];
+
+/** Lien de navigation : la page courante est signalée (aria-current) et soulignée. */
+function NavItem(props: NavLinkProps) {
+  return (
+    <NavLink
+      {...props}
+      className={({ isActive }) =>
+        `rounded-lg px-3 py-2 text-sm font-semibold no-underline transition-colors hover:bg-default ${
+          isActive ? 'text-accent-soft-foreground underline underline-offset-8' : 'text-foreground'
+        }`
+      }
+    />
+  );
+}
 
 /** Zone de session du layout : « Bonjour {prénom} » et Déconnexion, ou Connexion / Inscription. */
 export function SessionMenu() {
@@ -11,30 +27,30 @@ export function SessionMenu() {
   const location = useLocation();
 
   // Tant que /auth/me n'a pas répondu, on n'affiche rien : ni liens ni prénom qui se remplaceraient.
-  if (isPending) return <div className="session" aria-hidden="true" />;
+  if (isPending) return <div className="min-h-10" aria-hidden="true" />;
 
   if (user) {
     return (
-      <div className="session">
-        {user.role === 'ORGANIZER' && <Link to="/organisateur">Mes événements</Link>}
-        <Link to="/mes-inscriptions">Mes inscriptions</Link>
-        <span className="session__greeting">Bonjour {user.firstName}</span>
-        <button
-          type="button"
-          className="button button--ghost button--small"
-          disabled={signOut.isPending}
-          onClick={() =>
+      <nav aria-label="Compte" className="flex flex-wrap items-center gap-1 sm:gap-2">
+        {user.role === 'ORGANIZER' && <NavItem to="/organisateur">Mes événements</NavItem>}
+        <NavItem to="/mes-inscriptions">Mes inscriptions</NavItem>
+        <span className="px-2 text-sm text-muted">Bonjour {user.firstName}</span>
+        <Button
+          variant="tertiary"
+          size="sm"
+          isDisabled={signOut.isPending}
+          onPress={() =>
             signOut.mutate(undefined, { onSuccess: () => navigate('/events', { replace: true }) })
           }
         >
           Déconnexion
-        </button>
+        </Button>
         {signOut.isError && (
-          <span className="session__error" role="alert">
+          <span className="text-sm font-medium text-danger-soft-foreground" role="alert">
             Échec de la déconnexion, réessayez.
           </span>
         )}
-      </div>
+      </nav>
     );
   }
 
@@ -45,11 +61,11 @@ export function SessionMenu() {
     : `?redirect=${encodeURIComponent(here)}`;
 
   return (
-    <nav className="session" aria-label="Compte">
-      <Link to={`/connexion${query}`}>Connexion</Link>
-      <Link to={`/inscription${query}`} className="button button--small">
+    <nav aria-label="Compte" className="flex items-center gap-2">
+      <NavItem to={`/connexion${query}`}>Connexion</NavItem>
+      <NavLink to={`/inscription${query}`} className={linkButton('primary', 'sm')}>
         Inscription
-      </Link>
+      </NavLink>
     </nav>
   );
 }

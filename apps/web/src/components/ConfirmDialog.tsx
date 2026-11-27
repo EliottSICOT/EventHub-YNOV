@@ -1,4 +1,5 @@
-import { useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from 'react';
+import { AlertDialog, Button } from '@heroui/react';
+import { useId, type ReactNode } from 'react';
 
 interface ConfirmDialogProps {
   title: string;
@@ -12,9 +13,10 @@ interface ConfirmDialogProps {
 }
 
 /**
- * Boîte de confirmation modale (`alertdialog`).
- * Le focus arrive sur le bouton sûr (celui qui renonce), Tab reste dans la boîte,
- * Échap ou un clic à l'extérieur renonce, et le focus revient à l'élément d'origine à la fermeture.
+ * Boîte de confirmation modale (`alertdialog`), sur l'AlertDialog de HeroUI (React Aria) :
+ * le focus arrive sur le bouton sûr (celui qui renonce), reste dans la boîte, Échap ou un clic
+ * à l'extérieur renonce, et le focus revient à l'élément d'origine à la fermeture.
+ * Le parent n'affiche la boîte que lorsqu'il faut confirmer.
  */
 export function ConfirmDialog({
   title,
@@ -25,86 +27,44 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
-  const titleId = useId();
   const descriptionId = useId();
-  const dialogRef = useRef<HTMLDivElement>(null);
-  const cancelRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    const previouslyFocused = document.activeElement as HTMLElement | null;
-    cancelRef.current?.focus();
-    return () => previouslyFocused?.focus?.();
-  }, []);
-
-  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === 'Escape' && !pending) {
-      event.stopPropagation();
-      onCancel();
-      return;
-    }
-    if (event.key === 'Tab') {
-      const buttons =
-        dialogRef.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)');
-      if (!buttons || buttons.length === 0) {
-        event.preventDefault();
-        return;
-      }
-      const first = buttons[0];
-      const last = buttons[buttons.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    }
-  };
 
   return (
-    <div
-      className="dialog-backdrop"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget && !pending) onCancel();
+    <AlertDialog.Backdrop
+      isOpen
+      onOpenChange={(open) => {
+        if (!open && !pending) onCancel();
       }}
+      isDismissable={!pending}
+      isKeyboardDismissDisabled={pending}
     >
-      <div
-        ref={dialogRef}
-        className="dialog"
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        aria-describedby={children ? descriptionId : undefined}
-        onKeyDown={handleKeyDown}
-      >
-        <h2 id={titleId} className="dialog__title">
-          {title}
-        </h2>
-        {children && (
-          <div id={descriptionId} className="dialog__body">
-            {children}
-          </div>
-        )}
-        <div className="dialog__actions">
-          <button
-            ref={cancelRef}
-            type="button"
-            className="button button--ghost"
-            disabled={pending}
-            onClick={onCancel}
-          >
-            {cancelLabel}
-          </button>
-          <button
-            type="button"
-            className="button button--danger"
-            disabled={pending}
-            onClick={onConfirm}
-          >
-            {confirmLabel}
-          </button>
-        </div>
-      </div>
-    </div>
+      <AlertDialog.Container>
+        <AlertDialog.Dialog
+          className="sm:max-w-md"
+          aria-describedby={children ? descriptionId : undefined}
+        >
+          <AlertDialog.Header>
+            <AlertDialog.Icon status="danger" aria-hidden="true" />
+            <AlertDialog.Heading level={2}>{title}</AlertDialog.Heading>
+          </AlertDialog.Header>
+          {children && (
+            <AlertDialog.Body
+              id={descriptionId}
+              className="text-sm leading-relaxed text-foreground"
+            >
+              {children}
+            </AlertDialog.Body>
+          )}
+          <AlertDialog.Footer>
+            <Button variant="tertiary" autoFocus isDisabled={pending} onPress={onCancel}>
+              {cancelLabel}
+            </Button>
+            <Button variant="danger" isDisabled={pending} onPress={onConfirm}>
+              {confirmLabel}
+            </Button>
+          </AlertDialog.Footer>
+        </AlertDialog.Dialog>
+      </AlertDialog.Container>
+    </AlertDialog.Backdrop>
   );
 }
