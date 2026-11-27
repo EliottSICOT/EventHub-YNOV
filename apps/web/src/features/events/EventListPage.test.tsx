@@ -278,3 +278,33 @@ describe('Recherche et tri (US10)', () => {
     expect(router.state.location.search).toBe('');
   });
 });
+
+describe('Accessibilité du catalogue (WCAG 2.2)', () => {
+  it("propose un lien d'évitement vers le contenu principal (2.4.1)", async () => {
+    renderApp('/events');
+    await screen.findByText('15 événements');
+    expect(screen.getByRole('link', { name: 'Aller au contenu' })).toHaveAttribute(
+      'href',
+      '#contenu',
+    );
+    expect(screen.getByRole('main')).toHaveAttribute('id', 'contenu');
+  });
+
+  it("donne un titre propre à l'onglet (2.4.2)", async () => {
+    renderApp('/events');
+    await screen.findByText('15 événements');
+    expect(document.title).toBe('Événements à venir – EventHub');
+  });
+
+  it('garde le focus sur la page quand le bouton de pagination devient inactif (2.4.3)', async () => {
+    const user = userEvent.setup();
+    renderApp('/events');
+    await screen.findByText('15 événements');
+
+    await user.click(screen.getByRole('button', { name: 'Suivant' }));
+
+    await screen.findByText('Page 2 sur 2');
+    expect(screen.getByRole('button', { name: 'Suivant' })).toBeDisabled();
+    expect(screen.getByRole('heading', { level: 1, name: 'Événements à venir' })).toHaveFocus();
+  });
+});
