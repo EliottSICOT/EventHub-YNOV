@@ -1,8 +1,11 @@
-import { useCallback, useEffect, useMemo } from 'react';
+import { Button } from '@heroui/react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router';
 import { useCategories, useEvents } from '../../api/queries';
+import { useDocumentTitle } from '../../app/useDocumentTitle';
 import { Spinner } from '../../components/Spinner';
 import { StatusMessage } from '../../components/StatusMessage';
+import { pageSubtitle, pageTitle } from '../../components/ui';
 import { EventCard } from './EventCard';
 import { EventFilters } from './EventFilters';
 import {
@@ -19,6 +22,8 @@ export function EventListPage() {
   const filters = useMemo(() => filtersFromSearchParams(searchParams), [searchParams]);
   const events = useEvents(filters);
   const categories = useCategories();
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  useDocumentTitle('Événements à venir');
 
   const changeFilters = useCallback(
     (changes: FilterChanges) => setSearchParams((current) => updateSearchParams(current, changes)),
@@ -41,14 +46,19 @@ export function EventListPage() {
   const changePage = (page: number) => {
     setSearchParams((current) => updateSearchParams(current, { page }));
     window.scrollTo?.({ top: 0 });
+    // Le bouton cliqué peut devenir inactif (première ou dernière page) : sans cela, le focus
+    // clavier retomberait sur la page entière (2.4.3). On le place sur le titre.
+    headingRef.current?.focus();
   };
 
   return (
-    <section className="page">
-      <header className="page__header">
-        <h1>Événements à venir</h1>
+    <section className="flex flex-col gap-6">
+      <header>
+        <h1 ref={headingRef} tabIndex={-1} className={`${pageTitle} outline-none`}>
+          Événements à venir
+        </h1>
         {events.data && (
-          <p className="page__subtitle" aria-live="polite">
+          <p className={pageSubtitle} aria-live="polite">
             {events.data.meta.total} événement{events.data.meta.total > 1 ? 's' : ''}
           </p>
         )}
@@ -66,9 +76,7 @@ export function EventListPage() {
       ) : events.isError ? (
         <StatusMessage variant="error" title="Impossible de charger les événements">
           <p>Vérifiez votre connexion puis réessayez.</p>
-          <button type="button" className="button" onClick={() => void events.refetch()}>
-            Réessayer
-          </button>
+          <Button onPress={() => void events.refetch()}>Réessayer</Button>
         </StatusMessage>
       ) : events.data.data.length === 0 ? (
         <StatusMessage title="Aucun événement">
@@ -76,7 +84,10 @@ export function EventListPage() {
         </StatusMessage>
       ) : (
         <>
-          <ul className="grid" aria-busy={events.isFetching}>
+          <ul
+            className={`grid gap-5 sm:grid-cols-2 lg:grid-cols-3 ${events.isFetching ? 'opacity-60' : ''}`}
+            aria-busy={events.isFetching}
+          >
             {events.data.data.map((event) => (
               <li key={event.id}>
                 <EventCard event={event} />

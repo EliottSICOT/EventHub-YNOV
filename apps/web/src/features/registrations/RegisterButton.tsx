@@ -1,7 +1,9 @@
+import { Button } from '@heroui/react';
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router';
 import { ApiError } from '../../api/client';
 import type { EventDetail } from '../../api/types';
+import { linkButton, textLink } from '../../components/ui';
 import { useMe } from '../auth/api';
 import {
   useJoinWaitlist,
@@ -56,23 +58,25 @@ export function RegisterButton({ event, now: nowProp }: RegisterButtonProps) {
 
   if (event.isCancelled) {
     return (
-      <button type="button" className="button" disabled>
+      <Button fullWidth size="lg" isDisabled>
         Événement annulé
-      </button>
+      </Button>
     );
   }
 
   if (alreadyRegistered) {
     return (
-      <div className="register">
-        <button type="button" className="button" disabled>
+      <div className="flex flex-col gap-3">
+        <Button fullWidth size="lg" isDisabled>
           Inscrit ✓
-        </button>
+        </Button>
         {register.isSuccess && (
-          <p className="register__confirmation" role="status">
+          <p className="text-sm text-success-soft-foreground" role="status">
             Inscription confirmée : vous participez à « {event.title} ». Vous allez recevoir un
             e-mail de confirmation{user && <> à l'adresse {user.email}</>}.{' '}
-            <Link to="/mes-inscriptions">Voir mes inscriptions</Link>
+            <Link to="/mes-inscriptions" className={textLink}>
+              Voir mes inscriptions
+            </Link>
           </p>
         )}
       </div>
@@ -81,9 +85,9 @@ export function RegisterButton({ event, now: nowProp }: RegisterButtonProps) {
 
   if (new Date(event.startsAt).getTime() <= now) {
     return (
-      <button type="button" className="button" disabled>
+      <Button fullWidth size="lg" isDisabled>
         Événement terminé
-      </button>
+      </Button>
     );
   }
 
@@ -91,7 +95,10 @@ export function RegisterButton({ event, now: nowProp }: RegisterButtonProps) {
     if (!sessionPending && !user) {
       const redirect = encodeURIComponent(`${location.pathname}${location.search}`);
       return (
-        <Link to={`/connexion?redirect=${redirect}`} className="button">
+        <Link
+          to={`/connexion?redirect=${redirect}`}
+          className={linkButton('primary', 'lg') + ' w-full'}
+        >
           Rejoindre la liste d'attente
         </Link>
       );
@@ -100,22 +107,22 @@ export function RegisterButton({ event, now: nowProp }: RegisterButtonProps) {
     const onWaitlist = myEntry ?? (joinWaitlist.isSuccess ? joinWaitlist.data : null);
     if (onWaitlist) {
       return (
-        <div className="register">
-          <p className="register__confirmation" role="status">
+        <div className="flex flex-col gap-3">
+          <p className="text-sm text-success-soft-foreground" role="status">
             Vous êtes en liste d'attente (position {onWaitlist.position}).
           </p>
-          <button
-            type="button"
-            className="button button--ghost"
-            disabled={leaveWaitlist.isPending}
-            onClick={() =>
+          <Button
+            fullWidth
+            variant="outline"
+            isDisabled={leaveWaitlist.isPending}
+            onPress={() =>
               leaveWaitlist.mutate(onWaitlist.id, { onSuccess: () => joinWaitlist.reset() })
             }
           >
             {leaveWaitlist.isPending ? 'Retrait…' : "Quitter la liste d'attente"}
-          </button>
+          </Button>
           {leaveWaitlist.isError && (
-            <p className="register__error" role="alert">
+            <p className="text-sm font-medium text-danger-soft-foreground" role="alert">
               Impossible de quitter la liste d'attente. Réessayez.
             </p>
           )}
@@ -124,17 +131,17 @@ export function RegisterButton({ event, now: nowProp }: RegisterButtonProps) {
     }
 
     return (
-      <div className="register">
-        <button
-          type="button"
-          className="button"
-          disabled={sessionPending || joinWaitlist.isPending || waitlist.isPending}
-          onClick={() => joinWaitlist.mutate()}
+      <div className="flex flex-col gap-3">
+        <Button
+          fullWidth
+          size="lg"
+          isDisabled={sessionPending || joinWaitlist.isPending || waitlist.isPending}
+          onPress={() => joinWaitlist.mutate()}
         >
           {joinWaitlist.isPending ? 'Inscription…' : "Rejoindre la liste d'attente"}
-        </button>
+        </Button>
         {joinWaitlist.isError && (
-          <p className="register__error" role="alert">
+          <p className="text-sm font-medium text-danger-soft-foreground" role="alert">
             {waitlistErrorMessage(joinWaitlist.error)}
           </p>
         )}
@@ -145,24 +152,27 @@ export function RegisterButton({ event, now: nowProp }: RegisterButtonProps) {
   if (!sessionPending && !user) {
     const redirect = encodeURIComponent(`${location.pathname}${location.search}`);
     return (
-      <Link to={`/connexion?redirect=${redirect}`} className="button">
+      <Link
+        to={`/connexion?redirect=${redirect}`}
+        className={linkButton('primary', 'lg') + ' w-full'}
+      >
         S'inscrire
       </Link>
     );
   }
 
   return (
-    <div className="register">
-      <button
-        type="button"
-        className="button"
-        disabled={sessionPending || register.isPending}
-        onClick={() => register.mutate()}
+    <div className="flex flex-col gap-3">
+      <Button
+        fullWidth
+        size="lg"
+        isDisabled={sessionPending || register.isPending}
+        onPress={() => register.mutate()}
       >
         {register.isPending ? 'Inscription…' : "S'inscrire"}
-      </button>
+      </Button>
       {register.isError && (
-        <p className="register__error" role="alert">
+        <p className="text-sm font-medium text-danger-soft-foreground" role="alert">
           {errorMessage(register.error)}
         </p>
       )}

@@ -1,8 +1,12 @@
+import { Button, Card } from '@heroui/react';
 import { Link, useLocation, useParams } from 'react-router';
 import { ApiError } from '../../api/client';
 import { useEvent } from '../../api/queries';
+import { useDocumentTitle } from '../../app/useDocumentTitle';
+import { Notice } from '../../components/Notice';
 import { Spinner } from '../../components/Spinner';
 import { StatusMessage } from '../../components/StatusMessage';
+import { pageTitle, sectionTitle, textLink } from '../../components/ui';
 import type { CreatedEventState } from '../organizer/CreateEventPage';
 import type { UpdatedEventState } from '../organizer/EditEventPage';
 import { EventActions } from '../organizer/EventActions';
@@ -17,9 +21,10 @@ export function EventDetailPage() {
   // Arrivée depuis le formulaire de création (US08) ou de modification (US09).
   const saved = useLocation().state as CreatedEventState | UpdatedEventState | null;
   const isNew = saved !== null && 'created' in saved;
+  useDocumentTitle(event?.title ?? (isError ? 'Événement introuvable' : undefined));
 
   const back = (
-    <Link to="/events" className="back-link">
+    <Link to="/events" className={`${textLink} inline-flex w-fit text-sm`}>
       ← Retour aux événements
     </Link>
   );
@@ -29,7 +34,7 @@ export function EventDetailPage() {
   if (isError) {
     const notFound = error instanceof ApiError && error.status === 404;
     return (
-      <section className="page">
+      <section className="flex flex-col gap-4">
         {back}
         {notFound ? (
           <StatusMessage variant="error" title="Événement introuvable">
@@ -37,9 +42,7 @@ export function EventDetailPage() {
           </StatusMessage>
         ) : (
           <StatusMessage variant="error" title="Impossible de charger l'événement">
-            <button type="button" className="button" onClick={() => void refetch()}>
-              Réessayer
-            </button>
+            <Button onPress={() => void refetch()}>Réessayer</Button>
           </StatusMessage>
         )}
       </section>
@@ -47,82 +50,99 @@ export function EventDetailPage() {
   }
 
   return (
-    <article className="page detail">
+    <article className="flex flex-col gap-6">
       {back}
       {saved && !event.isCancelled && (
-        <p className="notice notice--success" role="status">
+        <Notice tone="success" role="status">
           {isNew
             ? 'Événement créé : il est maintenant visible dans le catalogue.'
             : 'Événement modifié.'}
-        </p>
+        </Notice>
       )}
       {saved?.imageError && (
-        <p className="notice notice--warning" role="alert">
+        <Notice tone="warning" role="alert">
           L'événement est bien {isNew ? 'créé' : 'modifié'}, mais l'image n'a pas été enregistrée :{' '}
           {saved.imageError}
-        </p>
+        </Notice>
       )}
       {event.isCancelled && (
-        <p className="notice notice--error">
+        <Notice tone="danger">
           <strong>Événement annulé</strong> par son organisateur : les inscriptions sont fermées.
-        </p>
+        </Notice>
       )}
       <EventActions event={event} />
+
       {event.imageUrl ? (
-        <img className="detail__image" src={event.imageUrl} alt={`Visuel de ${event.title}`} />
+        <img
+          className="aspect-[3/1] w-full rounded-3xl object-cover shadow-sm"
+          src={event.imageUrl}
+          alt={`Visuel de ${event.title}`}
+        />
       ) : (
-        <div className="detail__image detail__image--placeholder" aria-hidden="true">
+        <div
+          className="grid aspect-[4/1] w-full place-items-center rounded-3xl bg-accent-soft text-2xl font-extrabold text-accent-soft-foreground sm:text-4xl"
+          aria-hidden="true"
+        >
           {event.category.name}
         </div>
       )}
 
-      <header className="detail__header">
-        <span className="card__category">{event.category.name}</span>
-        <h1>{event.title}</h1>
-      </header>
+      <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+        <div className="flex flex-col gap-6">
+          <header className="flex flex-col gap-2">
+            <span className="text-xs font-bold tracking-wider text-accent-soft-foreground uppercase">
+              {event.category.name}
+            </span>
+            <h1 className={pageTitle}>{event.title}</h1>
+          </header>
 
-      <dl className="detail__facts">
-        <div>
-          <dt>Date</dt>
-          <dd>
-            <time dateTime={event.startsAt}>{formatDateTime(event.startsAt)}</time>
-          </dd>
+          <section className="flex flex-col gap-2">
+            <h2 className={sectionTitle}>Description</h2>
+            <p className="leading-relaxed whitespace-pre-line text-foreground">
+              {event.description}
+            </p>
+          </section>
         </div>
-        <div>
-          <dt>Lieu</dt>
-          <dd>
-            {event.venue}
-            {event.address && <>, {event.address}</>} · {event.city}
-          </dd>
-        </div>
-        <div>
-          <dt>Prix</dt>
-          <dd>{formatPrice(event.priceCents)}</dd>
-        </div>
-        <div>
-          <dt>Organisateur</dt>
-          <dd>{event.organizer.name}</dd>
-        </div>
-        <div>
-          <dt>Places</dt>
-          <dd className="detail__seats">
-            <SeatsBadge
-              remainingSeats={event.remainingSeats}
-              capacity={event.capacity}
-              isFull={event.isFull}
-            />
-            <span className="muted">sur {event.capacity}</span>
-          </dd>
-        </div>
-      </dl>
 
-      <section className="detail__description">
-        <h2>Description</h2>
-        <p>{event.description}</p>
-      </section>
-
-      <div className="detail__actions">
-        <RegisterButton event={event} />
+        <Card className="h-fit gap-5 p-6 lg:sticky lg:top-24">
+          <dl className="grid gap-4 text-sm">
+            <div>
+              <dt className="font-semibold text-muted">Date</dt>
+              <dd className="mt-0.5 text-base text-foreground">
+                <time dateTime={event.startsAt}>{formatDateTime(event.startsAt)}</time>
+              </dd>
+            </div>
+            <div>
+              <dt className="font-semibold text-muted">Lieu</dt>
+              <dd className="mt-0.5 text-base text-foreground">
+                {event.venue}
+                {event.address && <>, {event.address}</>} · {event.city}
+              </dd>
+            </div>
+            <div>
+              <dt className="font-semibold text-muted">Prix</dt>
+              <dd className="mt-0.5 text-base font-bold text-foreground">
+                {formatPrice(event.priceCents)}
+              </dd>
+            </div>
+            <div>
+              <dt className="font-semibold text-muted">Organisateur</dt>
+              <dd className="mt-0.5 text-base text-foreground">{event.organizer.name}</dd>
+            </div>
+            <div>
+              <dt className="font-semibold text-muted">Places</dt>
+              <dd className="mt-1 flex items-center gap-2">
+                <SeatsBadge
+                  remainingSeats={event.remainingSeats}
+                  capacity={event.capacity}
+                  isFull={event.isFull}
+                />
+                <span className="text-muted">sur {event.capacity}</span>
+              </dd>
+            </div>
+          </dl>
+          <RegisterButton event={event} />
+        </Card>
       </div>
     </article>
   );
